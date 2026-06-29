@@ -1,0 +1,11 @@
+﻿@using MusicStore.Pages
+@model IndexModel
+
+@if (Model.IsTableView)
+{
+    @await Html.PartialAsync("_TableView", Model)
+}
+else
+{
+    @await Html.PartialAsync("_GalleryView", Model)
+}

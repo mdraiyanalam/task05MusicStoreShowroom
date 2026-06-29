@@ -1,0 +1,115 @@
+﻿@page
+@model MusicStore.Pages.IndexModel
+
+@{
+    ViewData["Title"] = "MusicStore";
+}
+
+<div class="container mt-4">
+    <div class="bg-light p-3 mb-4 border rounded shadow-sm">
+        <div class="row align-items-end g-3">
+            <div class="col-md-3">
+                <label class="form-label fw-bold">Language</label>
+                <select id="language" class="form-select" asp-for="Language">
+                    <option value="English">English</option>
+                    <option value="Bengali">Bengali</option>
+                    <option value="Hindi">Hindi</option>
+                    <option value="Spanish">Spanish</option>
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label fw-bold">Seed</label>
+                <input type="number" id="seed" class="form-control" asp-for="Seed" />
+            </div>
+            <div class="col-md-3">
+                <label class="form-label fw-bold">Likes per Song</label>
+                <input type="number" id="likes" class="form-control" asp-for="LikesPerSong" />
+            </div>
+            <div class="col-md-3">
+                <label class="form-label fw-bold d-block">View Mode</label>
+                <div class="btn-group">
+                    <button onclick="switchToTable()" class="btn btn-outline-primary @(Model.IsTableView ? "active" : "")">Table</button>
+                    <button onclick="switchToGallery()" class="btn btn-outline-primary @(!Model.IsTableView ? "active" : "")">Gallery</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="content-area">
+        @await Html.PartialAsync("_SongListPartial", Model)
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        let currentIsTable = @Json.Serialize(Model.IsTableView);
+        let debounceTimer;
+
+        function updateData(resetPage = true) {
+            clearTimeout(debounceTimer);
+            debounceTimer = setTimeout(() => {
+                const lang = document.getElementById('language').value;
+                const seed = document.getElementById('seed').value || 42;
+                const likes = document.getElementById('likes').value || 1000;
+
+                const pageParam = resetPage ? 1 : @Model.CurrentPage;
+
+                const url = `?handler=SongsPartial&isTableView=${currentIsTable}&page=${pageParam}&Language=${encodeURIComponent(lang)}&Seed=${seed}&LikesPerSong=${likes}`;
+
+                fetch(url)
+                    .then(r => r.text())
+                    .then(html => {
+                        document.getElementById('content-area').innerHTML = html;
+                        if (!currentIsTable) {
+                            window.scrollTo({ top: 0, behavior: 'smooth' });
+                        }
+                    });
+            }, 300);
+        }
+
+        // Live listeners
+        document.getElementById('language').addEventListener('change', () => updateData(true));
+        document.getElementById('seed').addEventListener('input', () => updateData(true));
+        document.getElementById('likes').addEventListener('input', () => updateData(true));
+
+        function switchToTable() {
+            window.location.href = "/";
+        }
+
+        function switchToGallery() {
+            window.location.href = "/?handler=Gallery&page=1";
+        }
+
+                let loading = false;
+        let nextPage = 2;
+
+        function loadMore() {
+            if (loading || currentIsTable) return;
+            loading = true;
+
+            const lang = document.getElementById('language').value;
+            const seed = document.getElementById('seed').value || 42;
+            const likes = document.getElementById('likes').value || 1000;
+
+            fetch(`?handler=SongsPartial&isTableView=false&page=${nextPage}&Language=${encodeURIComponent(lang)}&Seed=${seed}&LikesPerSong=${likes}`)
+                .then(r => r.text())
+                .then(html => {
+                    const temp = document.createElement('div');
+                    temp.innerHTML = html;
+                    const newRow = temp.querySelector('.row');
+                    if (newRow) {
+                        document.querySelector('#content-area .row').append(...newRow.children);
+                    }
+                    nextPage++;
+                    loading = false;
+                });
+        }
+
+        // Scroll trigger
+        window.addEventListener('scroll', () => {
+            if (window.innerHeight + window.scrollY >= document.body.offsetHeight - 600) {
+                loadMore();
+            }
+        });
+    </script>
+}
