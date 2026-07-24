@@ -103,7 +103,8 @@ public class SongGeneratorService
                     Likes = likes,
                     AudioPreviewUrl = $"/audio/{seed}/{globalId}",
                     CoverImageUrl = $"/cover/{(string.IsNullOrEmpty(language)?"en-US":language)}/{seed}/{globalId}",
-                    Review = review
+                LyricsUrl = $"/lyrics/{(string.IsNullOrEmpty(language)?"en-US":language)}/{seed}/{globalId}",
+                Review = review
                 });
         }
 
@@ -143,7 +144,7 @@ public class SongGeneratorService
     }
 
     // Synthesize WAV audio and return bytes (browser will play audio/wav)
-    public byte[] GenerateAudioMp3(long seed, int id, int seconds = 12)
+    public byte[] GenerateAudioWav(long seed, int id, int seconds = 12)
     {
         int s = (int)((seed ^ id) & 0x7FFFFFFF);
         var rng = new Random(s);
@@ -169,6 +170,61 @@ public class SongGeneratorService
             }
         }
         return msWav.ToArray();
+    }
+
+    // Generate MP3 bytes by calling ffmpeg if available; falls back to WAV bytes if ffmpeg not found
+    public byte[] GenerateAudioMp3(long seed, int id, int seconds = 12)
+    {
+        var wav = GenerateAudioWav(seed, id, seconds);
+        try
+        {
+            var tempWav = Path.Combine(Path.GetTempPath(), $"song_{seed}_{id}_{Guid.NewGuid()}.wav");
+            var tempMp3 = Path.Combine(Path.GetTempPath(), $"song_{seed}_{id}_{Guid.NewGuid()}.mp3");
+            File.WriteAllBytes(tempWav, wav);
+            var psi = new System.Diagnostics.ProcessStartInfo
+            {
+                FileName = "ffmpeg",
+                Arguments = $"-y -i \"{tempWav}\" -b:a 128k \"{tempMp3}\"",
+                RedirectStandardOutput = true,
+                RedirectStandardError = true,
+                UseShellExecute = false,
+                CreateNoWindow = true
+            };
+            using (var p = System.Diagnostics.Process.Start(psi))
+            {
+                p.WaitForExit(10000);
+            }
+            if (File.Exists(tempMp3))
+            {
+                var mp3 = File.ReadAllBytes(tempMp3);
+                try { File.Delete(tempWav); } catch { }
+                try { File.Delete(tempMp3); } catch { }
+                return mp3;
+            }
+        }
+        catch { }
+        // fallback to wav
+        return wav;
+    }
+
+    // Generate simple timestamped lyrics using locale word lists
+    public List<(double time, string line)> GenerateLyrics(string language, long seed, int id, int seconds = 12)
+    {
+        var locale = GetLocale(language);
+        string[] words = locale.HasValue && locale.Value.TryGetProperty("lyricsWords", out var lw) ? lw.EnumerateArray().Select(x => x.GetString() ?? "la").ToArray() : new[] { "la", "na", "da", "oh" };
+        int s = (int)((seed ^ id ^ (long)seconds) & 0x7FFFFFFF);
+        var rng = new Random(s);
+        var lines = new List<(double time, string line)>();
+        int lineCount = Math.Max(4, seconds / 3);
+        for (int i = 0; i < lineCount; i++)
+        {
+            double t = Math.Round( (double)i * (seconds / (double)lineCount), 2);
+            int wordsPerLine = 3 + rng.Next(0,4);
+            var parts = new List<string>();
+            for (int w = 0; w < wordsPerLine; w++) parts.Add(words[rng.Next(words.Length)]);
+            lines.Add((t, string.Join(' ', parts)));
+        }
+        return lines;
     }
 
     // Return a single song metadata by global id, using a consistent page size (12) so generator output matches page-based lists

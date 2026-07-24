@@ -22,15 +22,19 @@ jobs:
 
       - name: Run smoke tests
         run: |
+          sudo apt-get update && sudo apt-get install -y ffmpeg
           dotnet run --project ./task05MusicStoreShowroom.csproj --urls "http://localhost:5000" &
           pid=$!
           echo "Started app with PID $pid"
-          sleep 5
+          sleep 6
           curl -f http://localhost:5000/ || (echo "root failed"; exit 1)
           curl -f http://localhost:5000/cover/en-US/42/1 || (echo "cover failed"; exit 1)
           curl -f http://localhost:5000/audio/42/1 || (echo "audio failed"; exit 1)
           curl -f "http://localhost:5000/export?seed=42&page=1&count=2&Language=en-US" || (echo "export failed"; exit 1)
           kill $pid || true
+
+      - name: (tests job) Install ffmpeg for Playwright job
+        run: sudo apt-get update && sudo apt-get install -y ffmpeg
 
   tests:
     needs: build
