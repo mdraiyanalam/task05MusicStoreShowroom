@@ -29,23 +29,23 @@ app.MapGet("/audio/{seed:long}/{id:int}", (long seed, int id, SongGeneratorServi
     return Results.File(audio, "audio/wav");
 });
 
-app.MapGet("/cover/{seed:long}/{id:int}", (long seed, int id, SongGeneratorService svc) =>
+app.MapGet("/cover/{language}/{seed:long}/{id:int}", (string language, long seed, int id, SongGeneratorService svc) =>
 {
-    // need title and artist to render; generate minimal song metadata
-    var s = svc.GenerateSongs("", seed, 0, 1, id);
-    var first = s.FirstOrDefault();
-    var png = svc.GenerateCoverPng(seed, id, first?.Title ?? $"Song {id}", first?.Artist ?? "Unknown");
+    // Generate metadata using the requested language so cover text reflects locale
+    var song = svc.GenerateSongById(language, seed, id);
+    var png = svc.GenerateCoverPng(seed, id, song?.Title ?? $"Song {id}", song?.Artist ?? "Unknown");
     return Results.File(png, "image/png");
 });
 
 app.MapGet("/export", (HttpRequest req, SongGeneratorService svc) =>
 {
-    // expects query: seed, page, count
+    // expects query: seed, page, count, Language
     long seed = long.TryParse(req.Query["seed"], out var sv) ? sv : 42L;
     int page = int.TryParse(req.Query["page"], out var pv) ? pv : 1;
     int count = int.TryParse(req.Query["count"], out var cv) ? cv : 12;
+    string language = req.Query["Language"].FirstOrDefault() ?? req.Query["language"].FirstOrDefault() ?? "en-US";
 
-    var songs = svc.GenerateSongs("", seed, 0, count, page);
+    var songs = svc.GenerateSongs(language, seed, 0, count, page);
     using var ms = new MemoryStream();
     using (var archive = new System.IO.Compression.ZipArchive(ms, System.IO.Compression.ZipArchiveMode.Create, true))
     {

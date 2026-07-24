@@ -90,7 +90,7 @@ public class SongGeneratorService
                 likes = baseLikes + (likesRng.NextDouble() < frac ? 1 : 0);
             }
 
-            songs.Add(new Song
+                songs.Add(new Song
             {
                 Id = globalId,
                 Title = title,
@@ -100,7 +100,7 @@ public class SongGeneratorService
                 Genre = genre,
                 Likes = likes,
                 AudioPreviewUrl = $"/audio/{seed}/{globalId}",
-                CoverImageUrl = $"/cover/{seed}/{globalId}"
+                    CoverImageUrl = $"/cover/{(string.IsNullOrEmpty(language)?"en-US":language)}/{seed}/{globalId}"
             });
         }
 
@@ -149,7 +149,25 @@ public class SongGeneratorService
             }
         }
 
-        // save without drawing text (avoids extra ImageSharp.Drawing dependency)
+        // draw simple text overlay for title/artist to reflect locale choice (no external drawing lib)
+        // very small: draw first letters using pixel blocks
+        void DrawTextAt(int x0, int y0, string text)
+        {
+            int sx = x0;
+            foreach (var ch in text.Take(20))
+            {
+                int shade = 200 - (ch % 20) * 5;
+                var col = new Rgba32((byte)shade, (byte)shade, (byte)shade);
+                for (int y = Math.Max(0, y0); y < Math.Min(h, y0 + 6); y++)
+                    for (int x = Math.Max(0, sx); x < Math.Min(w, sx + 10); x++)
+                        img[x, y] = col;
+                sx += 12;
+            }
+        }
+
+        DrawTextAt(12, 200, title);
+        DrawTextAt(12, 220, artist);
+
         using var ms = new MemoryStream();
         img.SaveAsPng(ms);
         return ms.ToArray();
@@ -182,5 +200,15 @@ public class SongGeneratorService
             }
         }
         return msWav.ToArray();
+    }
+
+    // Return a single song metadata by global id, using a consistent page size (12) so generator output matches page-based lists
+    public Song GenerateSongById(string language, long seed, int id, int pageSize = 12)
+    {
+        if (id <= 0) return null!;
+        int page = ((id - 1) / pageSize) + 1;
+        int indexInPage = (id - 1) % pageSize;
+        var list = GenerateSongs(language, seed, 0, pageSize, page);
+        return list.FirstOrDefault(s => s.Id == id) ?? list.ElementAtOrDefault(indexInPage)!;
     }
 }
