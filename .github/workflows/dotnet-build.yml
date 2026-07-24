@@ -31,3 +31,43 @@ jobs:
           curl -f http://localhost:5000/audio/42/1 || (echo "audio failed"; exit 1)
           curl -f "http://localhost:5000/export?seed=42&page=1&count=2&Language=en-US" || (echo "export failed"; exit 1)
           kill $pid || true
+
+  tests:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+      - name: Restore
+        run: dotnet restore
+      - name: Build
+        run: dotnet build --no-restore --configuration Release
+
+      - name: Start app
+        run: |
+          dotnet run --project ./task05MusicStoreShowroom.csproj --urls "http://localhost:5000" &
+          echo $! > .app.pid
+          sleep 5
+
+      - name: Run unit/HTTP integration tests
+        run: |
+          dotnet test ./Tests/UiTests/UiTests.csproj --logger "trx" --no-build
+
+      - name: Install Playwright browsers
+        run: |
+          npx playwright@latest install --with-deps
+
+      - name: Run Playwright tests
+        run: |
+          dotnet test ./Tests/PlaywrightTests/PlaywrightTests.csproj --logger "trx" --no-build
+
+      - name: Stop app
+        run: |
+          if [ -f .app.pid ]; then kill $(cat .app.pid) || true; fi
