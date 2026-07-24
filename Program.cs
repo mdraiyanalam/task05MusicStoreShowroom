@@ -21,8 +21,6 @@ app.UseStaticFiles();
 
 app.UseRouting();
 
-app.UseAuthorization();
-
 // Map endpoints for generated audio and covers (after app is created)
 app.MapGet("/audio/{seed:long}/{id:int}", (long seed, int id, SongGeneratorService svc) =>
 {
@@ -82,8 +80,6 @@ app.UseHttpsRedirection();
 app.UseStaticFiles();
 
 app.UseRouting();
-
-app.UseAuthorization();
 
 app.MapRazorPages();
 

@@ -15,7 +15,7 @@ public class IndexModel : PageModel
     }
 
     [BindProperty(SupportsGet = true)]
-    public string Language { get; set; } = "English";
+    public string Language { get; set; } = "en-US";
 
     [BindProperty(SupportsGet = true)]
     public long Seed { get; set; } = 42L;
@@ -28,21 +28,22 @@ public class IndexModel : PageModel
     public int CurrentPage { get; set; } = 1;
     public const int PageSize = 12;
     public List<string> AvailableLocales { get; set; } = new();
+    public Dictionary<string, string> LocaleDisplayNames { get; set; } = new();
 
     public void OnGet(int page = 1)
     {
         CurrentPage = page;
         IsTableView = true;
-        LoadData();
         LoadLocales();
+        LoadData();
     }
 
     public void OnGetGallery(int page = 1)
     {
         IsTableView = false;
         CurrentPage = page;
-        LoadData();
         LoadLocales();
+        LoadData();
     }
 
     private void LoadData()
@@ -52,7 +53,12 @@ public class IndexModel : PageModel
 
     private void LoadLocales()
     {
-        // probe Data folder for locale files
+        // Hardcoded defaults and probe Data folder for locale files
+        LocaleDisplayNames["en-US"] = "English (USA)";
+        LocaleDisplayNames["de-DE"] = "German (Germany)";
+        AvailableLocales.Add("en-US");
+        AvailableLocales.Add("de-DE");
+
         var dataPath = Path.Combine(Directory.GetCurrentDirectory(), "Data");
         if (!Directory.Exists(dataPath)) return;
         foreach (var f in Directory.GetFiles(dataPath, "locales-*.json"))
@@ -63,7 +69,15 @@ public class IndexModel : PageModel
                 var doc = System.Text.Json.JsonSerializer.Deserialize<System.Text.Json.JsonElement>(txt);
                 if (doc.TryGetProperty("locale", out var el))
                 {
-                    AvailableLocales.Add(el.GetString() ?? Path.GetFileNameWithoutExtension(f));
+                    var localeId = el.GetString() ?? Path.GetFileNameWithoutExtension(f);
+                    if (!AvailableLocales.Contains(localeId))
+                    {
+                        AvailableLocales.Add(localeId);
+                    }
+                    if (!LocaleDisplayNames.ContainsKey(localeId))
+                    {
+                        LocaleDisplayNames[localeId] = localeId;
+                    }
                 }
             }
             catch { }

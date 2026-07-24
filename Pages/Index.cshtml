@@ -15,20 +15,21 @@
                     {
                         foreach (var loc in Model.AvailableLocales)
                         {
-                            <option value="@loc">@loc</option>
+                            var displayName = Model.LocaleDisplayNames.ContainsKey(loc) ? Model.LocaleDisplayNames[loc] : loc;
+                            <option value="@loc">@displayName</option>
                         }
                     }
                     else
                     {
-                        <option value="en-US">English (US)</option>
+                        <option value="en-US">English (USA)</option>
                     }
                 </select>
             </div>
             <div class="col-md-3">
                 <label class="form-label fw-bold">Seed</label>
                 <div class="input-group">
-                    <input type="number" id="seed" class="form-control" asp-for="Seed" step="1" />
-                    <button class="btn btn-outline-secondary" type="button" onclick="document.getElementById('seed').value = Math.floor(Math.random()*9000000000000) + 1">↻</button>
+                    <input type="text" id="seed" class="form-control" asp-for="Seed" />
+                    <button class="btn btn-outline-secondary" type="button" id="seed-rand-btn" aria-label="Random seed">↻</button>
                 </div>
             </div>
             <div class="col-md-3">
@@ -64,6 +65,12 @@
 
                 const pageParam = resetPage ? 1 : @Model.CurrentPage;
 
+                // Reset gallery pagination/scroll when parameters change
+                if (resetPage) {
+                    nextPage = 2; // reset batch counter for gallery infinite scroll
+                    loading = false;
+                }
+
                 const url = `?handler=SongsPartial&isTableView=${currentIsTable}&page=${pageParam}&Language=${encodeURIComponent(lang)}&Seed=${seed}&LikesPerSong=${likes}`;
 
                 fetch(url)
@@ -81,6 +88,20 @@
         document.getElementById('language').addEventListener('change', () => updateData(true));
         document.getElementById('seed').addEventListener('input', () => updateData(true));
         document.getElementById('likes').addEventListener('input', () => updateData(true));
+        document.getElementById('seed-rand-btn').addEventListener('click', generateRandomSeed);
+
+        function generateRandomSeed() {
+            // generate a cryptographically random 63-bit positive integer
+            const arr = new Uint32Array(2);
+            crypto.getRandomValues(arr);
+            // combine into 53+ bits safely using BigInt
+            const high = BigInt(arr[0]);
+            const low = BigInt(arr[1]);
+            const combined = ((high << 32n) | low) & ((1n << 63n) - 1n);
+            const val = combined === 0n ? 1n : combined;
+            document.getElementById('seed').value = val.toString();
+            updateData(true);
+        }
 
         function switchToTable() {
             window.location.href = "/";
@@ -108,11 +129,14 @@
                     temp.innerHTML = html;
                     const newRow = temp.querySelector('.row');
                     if (newRow) {
-                        document.querySelector('#content-area .row').append(...newRow.children);
+                        const targetRow = document.querySelector('#content-area .row');
+                        if (targetRow) targetRow.append(...newRow.children);
+                        else document.getElementById('content-area').appendChild(newRow);
                     }
                     nextPage++;
                     loading = false;
-                });
+                })
+                .catch(()=>{ loading = false; });
         }
 
         // Scroll trigger
