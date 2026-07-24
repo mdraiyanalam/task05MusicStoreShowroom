@@ -103,7 +103,7 @@
             updateData(true);
         }
 
-        // Row expand/collapse behavior for table view
+        // Row expand/collapse behavior for table view and lyrics sync
         document.addEventListener('click', function (e) {
             const tr = e.target.closest && e.target.closest('.song-row');
             if (!tr) return;
@@ -111,6 +111,45 @@
             const detail = document.getElementById('detail-' + id);
             if (!detail) return;
             detail.classList.toggle('d-none');
+            // if expanding, load lyrics and attach player sync
+            if (!detail.classList.contains('d-none')) {
+                const lyricsContainer = detail.querySelector('.lyrics-container');
+                const player = detail.querySelector('audio.song-player');
+                if (lyricsContainer && player) {
+                    const url = lyricsContainer.getAttribute('data-lyrics-url');
+                    if (url && lyricsContainer.innerText.includes('Loading lyrics')) {
+                        fetch(url).then(r => r.json()).then(lines => {
+                            lyricsContainer.innerHTML = '';
+                            for (const l of lines) {
+                                const p = document.createElement('div');
+                                p.className = 'lyric-line';
+                                p.setAttribute('data-time', l.time);
+                                p.textContent = l.text;
+                                lyricsContainer.appendChild(p);
+                            }
+                        });
+                    }
+                    // attach sync
+                    player.removeEventListener('timeupdate', window.__lyricsSyncHandler);
+                    window.__lyricsSyncHandler = function () {
+                        try {
+                            const t = player.currentTime;
+                            const lines = detail.querySelectorAll('.lyric-line');
+                            let active = null;
+                            for (const ln of lines) {
+                                const lt = parseFloat(ln.getAttribute('data-time')) || 0;
+                                if (lt <= t) active = ln;
+                                ln.classList.remove('active-lyric');
+                            }
+                            if (active) {
+                                active.classList.add('active-lyric');
+                                active.scrollIntoView({ block: 'center', behavior: 'smooth' });
+                            }
+                        } catch (e) { }
+                    };
+                    player.addEventListener('timeupdate', window.__lyricsSyncHandler);
+                }
+            }
             // update likes when only likes changed via input; otherwise full data refreshed elsewhere
         });
 
