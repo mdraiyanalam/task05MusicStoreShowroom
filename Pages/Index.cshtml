@@ -15,12 +15,13 @@
                     {
                         foreach (var loc in Model.AvailableLocales)
                         {
-                            <option value="@loc">@loc</option>
+                            var displayName = Model.LocaleDisplayNames.ContainsKey(loc) ? Model.LocaleDisplayNames[loc] : loc;
+                            <option value="@loc">@displayName</option>
                         }
                     }
                     else
                     {
-                        <option value="en-US">English (US)</option>
+                        <option value="en-US">English (USA)</option>
                     }
                 </select>
             </div>
