@@ -1,6 +1,7 @@
 using System;
 using System.Linq;
 using System.Threading.Tasks;
+using System.Globalization;
 using Microsoft.Playwright;
 using Xunit;
 
@@ -71,23 +72,21 @@ public class PlaywrightUITests : IAsyncLifetime
         const int pagesToFetch = 10;
         const int perPage = 12;
         const double likesTarget = 3.7;
-        var js = $@"
-            (async () => {{
-                const results = [];
-                for (let p=1;p<={pagesToFetch};p++) {{
-                    const url = `?handler=SongsPartial&isTableView=true&page=${{p}}&Language=en-US&Seed=424242&LikesPerSong={likesTarget}`;
-                    const r = await fetch(url);
-                    const html = await r.text();
-                    const doc = new DOMParser().parseFromString(html, 'text/html');
-                    const rows = Array.from(doc.querySelectorAll('tbody tr.song-row'));
-                    for (const r of rows) {{
-                        const likes = parseInt((r.querySelector('.likes-count') || {{} }).textContent || '0', 10);
-                        results.push(likes);
-                    }}
-                }}
-                return results;
-            }})();
-        ";
+        var js = @"(async () => {
+                const results = [];" +
+                "for (let p=1; p<= " + pagesToFetch + "; p++) {" +
+                "  const url = '?handler=SongsPartial&isTableView=true&page=' + p + '&Language=en-US&Seed=424242&LikesPerSong=" + "" + likesTarget.ToString(CultureInfo.InvariantCulture) + "" + "';" +
+                "  const r = await fetch(url);" +
+                "  const html = await r.text();" +
+                "  const doc = new DOMParser().parseFromString(html, 'text/html');" +
+                "  const rows = Array.from(doc.querySelectorAll('tbody tr.song-row'));" +
+                "  for (const rr of rows) {" +
+                "    const likes = parseInt((rr.querySelector('.likes-count') || {}).textContent || '0', 10);" +
+                "    results.push(likes);" +
+                "  }" +
+                "}" +
+                "return results;" +
+                "})();";
 
         var likesArray = await page.EvaluateAsync<int[]>(js);
         Assert.NotNull(likesArray);
