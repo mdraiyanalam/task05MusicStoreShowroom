@@ -11,19 +11,29 @@
             <div class="col-md-3">
                 <label class="form-label fw-bold">Language</label>
                 <select id="language" class="form-select" asp-for="Language">
-                    <option value="English">English</option>
-                    <option value="Bengali">Bengali</option>
-                    <option value="Hindi">Hindi</option>
-                    <option value="Spanish">Spanish</option>
+                    @if (Model.AvailableLocales != null && Model.AvailableLocales.Count > 0)
+                    {
+                        foreach (var loc in Model.AvailableLocales)
+                        {
+                            <option value="@loc">@loc</option>
+                        }
+                    }
+                    else
+                    {
+                        <option value="en-US">English (US)</option>
+                    }
                 </select>
             </div>
             <div class="col-md-3">
                 <label class="form-label fw-bold">Seed</label>
-                <input type="number" id="seed" class="form-control" asp-for="Seed" />
+                <div class="input-group">
+                    <input type="number" id="seed" class="form-control" asp-for="Seed" step="1" />
+                    <button class="btn btn-outline-secondary" type="button" onclick="document.getElementById('seed').value = Math.floor(Math.random()*9000000000000) + 1">↻</button>
+                </div>
             </div>
             <div class="col-md-3">
                 <label class="form-label fw-bold">Likes per Song</label>
-                <input type="number" id="likes" class="form-control" asp-for="LikesPerSong" />
+                <input type="number" id="likes" class="form-control" asp-for="LikesPerSong" step="0.1" min="0" max="10" />
             </div>
             <div class="col-md-3">
                 <label class="form-label fw-bold d-block">View Mode</label>
@@ -50,7 +60,7 @@
             debounceTimer = setTimeout(() => {
                 const lang = document.getElementById('language').value;
                 const seed = document.getElementById('seed').value || 42;
-                const likes = document.getElementById('likes').value || 1000;
+                const likes = document.getElementById('likes').value || 3.7;
 
                 const pageParam = resetPage ? 1 : @Model.CurrentPage;
 
@@ -89,7 +99,7 @@
 
             const lang = document.getElementById('language').value;
             const seed = document.getElementById('seed').value || 42;
-            const likes = document.getElementById('likes').value || 1000;
+            const likes = document.getElementById('likes').value || 3.7;
 
             fetch(`?handler=SongsPartial&isTableView=false&page=${nextPage}&Language=${encodeURIComponent(lang)}&Seed=${seed}&LikesPerSong=${likes}`)
                 .then(r => r.text())

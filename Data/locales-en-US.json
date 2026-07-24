@@ -1,0 +1,8 @@
+{
+  "locale": "en-US",
+  "genres": ["House","Rock","Folk","Electronic","Pop","Hip-Hop","Classical","Indie","Country","Jazz"],
+  "bandParts": ["Band","Collective","Orchestra","Ensemble","Trio","Quartet","Sextet"],
+  "firstNames": ["Elton","Ella","Albert","Mimi","Aaron","Frank","John","Sgt. Pepper","Dr. Smart","Anu"],
+  "lastNames": ["Smith","Fiz","Norton","Mike","Aaronson","Zappa","Silver","Tap","Viprasavah","Stone"],
+  "albumWords": ["Friends","That's It","Do or Don't","All My Circuits","Get schwifty!","Oh, My God","Single","No Good Deal"]
+}
