@@ -19,4 +19,11 @@
     <!-- <PackageReference Include="SixLabors.Fonts" Version="1.0.0" /> -->
   </ItemGroup>
 
+  <!-- Exclude test sources from the main project build (tests live under Tests/) -->
+  <ItemGroup>
+    <Compile Remove="Tests\**\*.cs" />
+    <EmbeddedResource Remove="Tests\**\*.*" />
+    <None Remove="Tests\**\*.*" />
+  </ItemGroup>
+
 </Project>
