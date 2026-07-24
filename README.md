@@ -10,3 +10,4 @@ Language independence
 Notes
 - For security/audit: authorization middleware was removed because the app intentionally runs without auth.
 - Locale files can be extended by adding new Data/locales-*.json files with arrays for firstNames, lastNames, genres, albumWords and a top-level "locale" field.
+- Last CI run triggered for Playwright tests: 2026-07-24T19:26:00Z
