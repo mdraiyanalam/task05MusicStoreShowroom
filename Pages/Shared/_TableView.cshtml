@@ -16,15 +16,31 @@
     <tbody>
         @foreach (var s in Model.Songs)
         {
-            <tr>
+            <tr class="song-row" data-id="@s.Id" style="cursor:pointer">
                 <td>@s.Id</td>
                 <td><img src="@s.CoverImageUrl" width="60" class="rounded" /></td>
                 <td><strong>@s.Title</strong></td>
                 <td>@s.Artist</td>
                 <td>@(string.IsNullOrEmpty(s.Album) ? "Single" : s.Album)</td>
                 <td>@s.Genre</td>
-                <td>@s.Likes.ToString("N0")</td>
+                <td class="likes-count">@s.Likes.ToString("N0")</td>
                 <td><audio controls style="width:220px"><source src="@s.AudioPreviewUrl" type="audio/mpeg"></audio></td>
+            </tr>
+            <tr class="song-detail d-none" id="detail-@s.Id">
+                <td colspan="8">
+                    <div class="d-flex gap-3 align-items-start">
+                        <img src="@s.CoverImageUrl" width="200" class="rounded" />
+                        <div>
+                            <h5>@s.Title</h5>
+                            <p class="mb-1 text-muted">@s.Artist &nbsp;•&nbsp; @(string.IsNullOrEmpty(s.Album) ? "Single" : s.Album)</p>
+                            <p class="fw-bold text-primary">@s.Likes.ToString("N0") likes</p>
+                            <audio controls>
+                                <source src="@s.AudioPreviewUrl" type="audio/wav">
+                            </audio>
+                            <p class="mt-2">@s.Review</p>
+                        </div>
+                    </div>
+                </td>
             </tr>
         }
     </tbody>

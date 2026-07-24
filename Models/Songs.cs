@@ -11,4 +11,5 @@ public class Song
     public int Likes { get; set; }
     public string AudioPreviewUrl { get; set; } = string.Empty;
     public string CoverImageUrl { get; set; } = string.Empty;
+    public string Review { get; set; } = string.Empty;
 }

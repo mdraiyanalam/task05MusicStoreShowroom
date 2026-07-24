@@ -19,3 +19,15 @@ jobs:
         run: dotnet restore
       - name: Build
         run: dotnet build --no-restore --configuration Release
+
+      - name: Run smoke tests
+        run: |
+          dotnet run --project ./task05MusicStoreShowroom.csproj --urls "http://localhost:5000" &
+          pid=$!
+          echo "Started app with PID $pid"
+          sleep 5
+          curl -f http://localhost:5000/ || (echo "root failed"; exit 1)
+          curl -f http://localhost:5000/cover/en-US/42/1 || (echo "cover failed"; exit 1)
+          curl -f http://localhost:5000/audio/42/1 || (echo "audio failed"; exit 1)
+          curl -f "http://localhost:5000/export?seed=42&page=1&count=2&Language=en-US" || (echo "export failed"; exit 1)
+          kill $pid || true
