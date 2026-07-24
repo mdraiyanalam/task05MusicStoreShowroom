@@ -13,9 +13,9 @@
       <PrivateAssets>all</PrivateAssets>
     </PackageReference>
     <PackageReference Include="Bogus" Version="34.0.2" />
-    <PackageReference Include="NAudio" Version="2.1.1" />
-    <PackageReference Include="SixLabors.ImageSharp" Version="3.1.0" />
-    <PackageReference Include="SixLabors.Fonts" Version="1.0.0" />
+    <PackageReference Include="NAudio" Version="2.2.0" />
+    <PackageReference Include="SixLabors.ImageSharp" Version="3.2.0" />
+    <PackageReference Include="SixLabors.Fonts" Version="1.1.0" />
   </ItemGroup>
 
 </Project>
