@@ -7,6 +7,7 @@
             <th>Cover</th>
             <th>Title</th>
             <th>Artist</th>
+            <th>Album</th>
             <th>Genre</th>
             <th>Likes</th>
             <th>Preview</th>
@@ -20,6 +21,7 @@
                 <td><img src="@s.CoverImageUrl" width="60" class="rounded" /></td>
                 <td><strong>@s.Title</strong></td>
                 <td>@s.Artist</td>
+                <td>@(string.IsNullOrEmpty(s.Album) ? "Single" : s.Album)</td>
                 <td>@s.Genre</td>
                 <td>@s.Likes.ToString("N0")</td>
                 <td><audio controls style="width:220px"><source src="@s.AudioPreviewUrl" type="audio/mpeg"></audio></td>

@@ -15,7 +15,7 @@ public class IndexModel : PageModel
     }
 
     [BindProperty(SupportsGet = true)]
-    public string Language { get; set; } = "English";
+    public string Language { get; set; } = "en-US";
 
     [BindProperty(SupportsGet = true)]
     public long Seed { get; set; } = 42L;

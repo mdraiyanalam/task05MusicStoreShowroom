@@ -3,10 +3,12 @@
     {
         <div class="col">
             <div class="card h-100 shadow-sm">
+                <div class="position-absolute m-2 badge bg-secondary text-white">#@s.Id</div>
                 <img src="@s.CoverImageUrl" class="card-img-top" style="height:220px; object-fit:cover;" alt="Cover">
                 <div class="card-body">
                     <h6 class="card-title">@s.Title</h6>
                     <p class="card-text text-muted">@s.Artist <br><small>@s.Genre</small></p>
+                    <p class="mb-1"><em>@(string.IsNullOrEmpty(s.Album) ? "Single" : s.Album)</em></p>
                     <p class="fw-bold text-primary">@s.Likes.ToString("N0") likes</p>
                 </div>
                 <div class="card-footer bg-white">
