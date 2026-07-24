@@ -33,8 +33,8 @@ app.MapGet("/cover/{language}/{seed:long}/{id:int}", (string language, long seed
 {
     // Generate metadata using the requested language so cover text reflects locale
     var song = svc.GenerateSongById(language, seed, id);
-    var png = svc.GenerateCoverPng(seed, id, song?.Title ?? $"Song {id}", song?.Artist ?? "Unknown");
-    return Results.File(png, "image/png");
+    var svg = svc.GenerateCoverSvg(seed, id, song?.Title ?? $"Song {id}", song?.Artist ?? "Unknown");
+        return Results.File(svg, "image/svg+xml");
 });
 
 app.MapGet("/export", (HttpRequest req, SongGeneratorService svc) =>

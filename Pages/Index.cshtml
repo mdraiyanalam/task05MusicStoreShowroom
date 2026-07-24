@@ -87,7 +87,7 @@
         // Live listeners
         document.getElementById('language').addEventListener('change', () => updateData(true));
         document.getElementById('seed').addEventListener('input', () => updateData(true));
-        document.getElementById('likes').addEventListener('input', () => updateData(true));
+        document.getElementById('likes').addEventListener('input', () => updateData(false)); // likes only updates counts
         document.getElementById('seed-rand-btn').addEventListener('click', generateRandomSeed);
 
         function generateRandomSeed() {
@@ -102,6 +102,17 @@
             document.getElementById('seed').value = val.toString();
             updateData(true);
         }
+
+        // Row expand/collapse behavior for table view
+        document.addEventListener('click', function (e) {
+            const tr = e.target.closest && e.target.closest('.song-row');
+            if (!tr) return;
+            const id = tr.getAttribute('data-id');
+            const detail = document.getElementById('detail-' + id);
+            if (!detail) return;
+            detail.classList.toggle('d-none');
+            // update likes when only likes changed via input; otherwise full data refreshed elsewhere
+        });
 
         function switchToTable() {
             window.location.href = "/";

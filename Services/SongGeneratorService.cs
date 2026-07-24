@@ -1,10 +1,7 @@
 ﻿using MusicStore.Models;
 using System.Text.Json;
 using System.IO;
-using SixLabors.ImageSharp;
-using SixLabors.ImageSharp.PixelFormats;
-using SixLabors.ImageSharp.Processing;
-using SixLabors.Fonts;
+using System.Text;
 using NAudio.Wave;
 
 namespace MusicStore.Services;
@@ -90,87 +87,59 @@ public class SongGeneratorService
                 likes = baseLikes + (likesRng.NextDouble() < frac ? 1 : 0);
             }
 
+                // generate a short review sentence
+                var reviewAdj = new[] { "captivating", "raw", "melodic", "experimental", "nostalgic", "energetic", "soothing", "haunting" };
+                var reviewNouns = new[] { "performance", "sound", "production", "arrangement", "vocals", "melody" };
+                var review = $"A {reviewAdj[contentRng.Next(reviewAdj.Length)]} {reviewNouns[contentRng.Next(reviewNouns.Length)]} that feels {reviewAdj[contentRng.Next(reviewAdj.Length)]}.";
+
                 songs.Add(new Song
-            {
-                Id = globalId,
-                Title = title,
-                Artist = artist,
-                Album = album,
-                Language = language,
-                Genre = genre,
-                Likes = likes,
-                AudioPreviewUrl = $"/audio/{seed}/{globalId}",
-                    CoverImageUrl = $"/cover/{(string.IsNullOrEmpty(language)?"en-US":language)}/{seed}/{globalId}"
-            });
+                {
+                    Id = globalId,
+                    Title = title,
+                    Artist = artist,
+                    Album = album,
+                    Language = language,
+                    Genre = genre,
+                    Likes = likes,
+                    AudioPreviewUrl = $"/audio/{seed}/{globalId}",
+                    CoverImageUrl = $"/cover/{(string.IsNullOrEmpty(language)?"en-US":language)}/{seed}/{globalId}",
+                    Review = review
+                });
         }
 
         return songs;
     }
 
-    public byte[] GenerateCoverPng(long seed, int id, string title, string artist)
+    public byte[] GenerateCoverSvg(long seed, int id, string title, string artist)
     {
+        // produce a simple SVG with gradient, rectangles and text; deterministic based on seed+id
         int s = (int)((seed ^ id) & 0x7FFFFFFF);
         var rng = new Random(s);
         int w = 400, h = 300;
-        using var img = new Image<Rgba32>(w, h);
-
-        // simple vertical gradient
-        var c1 = new Rgba32((byte)rng.Next(30,220), (byte)rng.Next(30,220), (byte)rng.Next(30,220));
-        var c2 = new Rgba32((byte)rng.Next(30,220), (byte)rng.Next(30,220), (byte)rng.Next(30,220));
-        for (int y = 0; y < h; y++)
+        var sb = new StringBuilder();
+        sb.Append($"<svg xmlns='http://www.w3.org/2000/svg' width='{w}' height='{h}' viewBox='0 0 {w} {h}'>");
+        // gradient
+        var c1 = (rng.Next(40,200), rng.Next(40,200), rng.Next(40,200));
+        var c2 = (rng.Next(40,200), rng.Next(40,200), rng.Next(40,200));
+        sb.Append($"<defs><linearGradient id='g' x1='0' y1='0' x2='0' y2='1'><stop offset='0' stop-color='rgb({c1.Item1},{c1.Item2},{c1.Item3})'/><stop offset='1' stop-color='rgb({c2.Item1},{c2.Item2},{c2.Item3})'/></linearGradient></defs>");
+        sb.Append($"<rect width='100%' height='100%' fill='url(#g)' />");
+        // random translucent rectangles
+        for (int i = 0; i < 5; i++)
         {
-            float t = (float)y / (h - 1);
-            byte r = (byte)(c1.R + (c2.R - c1.R) * t);
-            byte g = (byte)(c1.G + (c2.G - c1.G) * t);
-            byte b = (byte)(c1.B + (c2.B - c1.B) * t);
-            var rowColor = new Rgba32(r, g, b);
-            for (int x = 0; x < w; x++) img[x, y] = rowColor;
+            var rx = rng.Next(-50, w);
+            var ry = rng.Next(-50, h);
+            var rw = rng.Next(40, 220);
+            var rh = rng.Next(30, 160);
+            var cr = rng.Next(0,255); var cg = rng.Next(0,255); var cb = rng.Next(0,255); var a = 0.15 + rng.NextDouble()*0.4;
+            sb.Append($"<rect x='{rx}' y='{ry}' width='{rw}' height='{rh}' fill='rgba({cr},{cg},{cb},{a:F2})' />");
         }
-
-        // draw a few translucent rectangles by direct pixel writes
-        for (int k = 0; k < 5; k++)
-        {
-            int rx = rng.Next(-50, w);
-            int ry = rng.Next(-50, h);
-            int rw = rng.Next(40, 220);
-            int rh = rng.Next(30, 160);
-            var col = new Rgba32((byte)rng.Next(0,255), (byte)rng.Next(0,255), (byte)rng.Next(0,255), 120);
-            for (int yy = Math.Max(0, ry); yy < Math.Min(h, ry + rh); yy++)
-            for (int xx = Math.Max(0, rx); xx < Math.Min(w, rx + rw); xx++)
-            {
-                var dst = img[xx, yy];
-                // alpha blend simple
-                float a = col.A / 255f;
-                img[xx, yy] = new Rgba32(
-                    (byte)(dst.R * (1 - a) + col.R * a),
-                    (byte)(dst.G * (1 - a) + col.G * a),
-                    (byte)(dst.B * (1 - a) + col.B * a),
-                    255);
-            }
-        }
-
-        // draw simple text overlay for title/artist to reflect locale choice (no external drawing lib)
-        // very small: draw first letters using pixel blocks
-        void DrawTextAt(int x0, int y0, string text)
-        {
-            int sx = x0;
-            foreach (var ch in text.Take(20))
-            {
-                int shade = 200 - (ch % 20) * 5;
-                var col = new Rgba32((byte)shade, (byte)shade, (byte)shade);
-                for (int y = Math.Max(0, y0); y < Math.Min(h, y0 + 6); y++)
-                    for (int x = Math.Max(0, sx); x < Math.Min(w, sx + 10); x++)
-                        img[x, y] = col;
-                sx += 12;
-            }
-        }
-
-        DrawTextAt(12, 200, title);
-        DrawTextAt(12, 220, artist);
-
-        using var ms = new MemoryStream();
-        img.SaveAsPng(ms);
-        return ms.ToArray();
+        // title & artist text
+        var safeTitle = System.Security.SecurityElement.Escape(title ?? "");
+        var safeArtist = System.Security.SecurityElement.Escape(artist ?? "");
+        sb.Append($"<text x='20' y='50' font-family='Arial, sans-serif' font-size='20' fill='white'>{safeTitle}</text>");
+        sb.Append($"<text x='20' y='{h - 30}' font-family='Arial, sans-serif' font-size='14' fill='rgba(255,255,255,0.85)'>{safeArtist}</text>");
+        sb.Append("</svg>");
+        return Encoding.UTF8.GetBytes(sb.ToString());
     }
 
     // Synthesize WAV audio and return bytes (browser will play audio/wav)
