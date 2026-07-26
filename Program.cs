@@ -186,6 +186,22 @@ app.MapGet("/export-batch", (HttpRequest req, SongGeneratorService svc) =>
     return Results.File(ms.ToArray(), "application/zip", $"songs-{seed}-p{startPage}-{endPage}.zip");
 });
 
+// Likes-only endpoint: returns id+likes for visible songs so the client can update like counts without regenerating titles/artists
+app.MapGet("/likes", (HttpRequest req, SongGeneratorService svc) =>
+{
+    long seed = long.TryParse(req.Query["seed"], out var sv) ? sv : 42L;
+    int page = int.TryParse(req.Query["page"], out var pv) ? pv : 1;
+    int count = int.TryParse(req.Query["count"], out var cv) ? cv : 12;
+    string language = req.Query["Language"].FirstOrDefault() ?? req.Query["language"].FirstOrDefault() ?? "en-US";
+    double likesPerSong = 3.7;
+    if (double.TryParse(req.Query["LikesPerSong"], out var lps)) likesPerSong = lps;
+    else if (double.TryParse(req.Query["likes"], out var lps2)) likesPerSong = lps2;
+
+    var songs = svc.GenerateSongs(language, seed, likesPerSong, count, page);
+    var dto = songs.Select(s => new { id = s.Id, likes = s.Likes }).ToArray();
+    return Results.Json(dto);
+});
+
 string SanitizeFileName(string name)
 {
     foreach (var c in Path.GetInvalidFileNameChars()) name = name.Replace(c, '_');
