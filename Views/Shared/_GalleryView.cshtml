@@ -1,0 +1,26 @@
+@model MusicStore.Models.HomeViewModel
+
+<div class="row row-cols-1 row-cols-sm-2 row-cols-md-3 row-cols-lg-4 g-4">
+    @foreach (var s in Model.Songs)
+    {
+        <div class="col">
+            <div class="card h-100 shadow-sm">
+                <div class="position-absolute m-2 badge bg-secondary text-white">#@s.Id</div>
+                <img src="@s.CoverImageUrl" class="card-img-top" style="height:220px; object-fit:cover;" alt="Cover">
+                <div class="card-body">
+                    <h6 class="card-title">@s.Title</h6>
+                    <p class="card-text text-muted">@s.Artist <br><small>@s.Genre</small></p>
+                    <p class="mb-1"><em>@(string.IsNullOrEmpty(s.Album) ? "Single" : s.Album)</em></p>
+                    <p class="fw-bold text-primary">@s.Likes.ToString("N0") likes</p>
+                </div>
+                <div class="card-footer bg-white">
+                    <audio controls class="w-100">
+                        <source src="@s.AudioPreviewUrl" type="audio/mpeg">
+                    </audio>
+                </div>
+            </div>
+        </div>
+    }
+</div>
+
+<p class="text-center text-muted mt-4">Scroll down to load more songs</p>
