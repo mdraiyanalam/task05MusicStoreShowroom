@@ -1,8 +1,11 @@
 {
   "locale": "en-US",
-  "genres": ["House","Rock","Folk","Electronic","Pop","Hip-Hop","Classical","Indie","Country","Jazz"],
+  "genres": ["House","Rock","Folk","Electronic","Pop","Hip-Hop","Classical","Indie","Country","Jazz","R&B","Metal","Soul","Blues","Reggae"],
   "bandParts": ["Band","Collective","Orchestra","Ensemble","Trio","Quartet","Sextet"],
   "firstNames": ["Elton","Ella","Albert","Mimi","Aaron","Frank","John","Sgt. Pepper","Dr. Smart","Anu"],
   "lastNames": ["Smith","Fiz","Norton","Mike","Aaronson","Zappa","Silver","Tap","Viprasavah","Stone"],
-  "albumWords": ["Friends","That's It","Do or Don't","All My Circuits","Get schwifty!","Oh, My God","Single","No Good Deal"]
+  "albumWords": ["Friends","That's It","Do or Don't","All My Circuits","Get schwifty!","Oh, My God","Single","No Good Deal"],
+  "reviewAdjectives": ["captivating","raw","melodic","experimental","nostalgic","energetic","soothing","haunting","masterful","vibrant","innovative","authentic","bold","delicate","powerful"],
+  "reviewNouns": ["performance","sound","production","arrangement","vocals","melody","composition","delivery","instrumentation","texture","harmony","rhythm","beat","groove"],
+  "lyricsWords": ["la","na","da","oh","hey","yeah","ooh","ah","uh","hoo","yay","love","dream","night","light","heart","soul","free"]
 }

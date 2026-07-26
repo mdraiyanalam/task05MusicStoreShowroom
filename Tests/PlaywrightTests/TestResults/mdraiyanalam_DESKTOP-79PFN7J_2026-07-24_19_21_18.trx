@@ -1,0 +1,30 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TestRun id="cb3aba2a-7b1e-4f1b-b857-4e6caa345c98" name="mdraiyanalam@DESKTOP-79PFN7J 2026-07-24 19:21:18" runUser="DESKTOP-79PFN7J\mdraiyanalam" xmlns="http://microsoft.com/schemas/VisualStudio/TeamTest/2010">
+  <Times creation="2026-07-24T19:21:18.0494344+06:00" queuing="2026-07-24T19:21:18.0494349+06:00" start="2026-07-24T19:21:17.8746546+06:00" finish="2026-07-24T19:21:18.0501702+06:00" />
+  <TestSettings name="default" id="6612a3d8-6d23-4681-a73d-047592f55685">
+    <Deployment runDeploymentRoot="mdraiyanalam_DESKTOP-79PFN7J_2026-07-24_19_21_18" />
+  </TestSettings>
+  <TestLists>
+    <TestList name="Results Not in a List" id="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestList name="All Loaded Results" id="19431567-8539-422a-85d7-44ee4e166bda" />
+  </TestLists>
+  <ResultSummary outcome="Failed">
+    <Counters total="0" executed="0" passed="0" failed="0" error="0" timeout="0" aborted="0" inconclusive="0" passedButRunAborted="0" notRunnable="0" notExecuted="0" disconnected="0" warning="0" completed="0" inProgress="0" pending="0" />
+    <Output>
+      <StdOut>Error:&#xD;
+  An assembly specified in the application dependencies manifest (PlaywrightTests.deps.json) was not found:&#xD;
+    package: 'Microsoft.Bcl.AsyncInterfaces', version: '7.0.0'&#xD;
+    path: 'lib/netstandard2.1/Microsoft.Bcl.AsyncInterfaces.dll'&#xD;
+</StdOut>
+    </Output>
+    <RunInfos>
+      <RunInfo computerName="DESKTOP-79PFN7J" outcome="Error" timestamp="2026-07-24T19:21:18.0067362+06:00">
+        <Text>Testhost process for source(s) 'C:\Users\mdraiyanalam\.copilot\repos\copilot-worktrees\task05MusicStoreShowroom\gekapo3691-animated-enigma\Tests\PlaywrightTests\bin\Debug\net8.0\PlaywrightTests.dll' exited with error: Error:&#xD;
+  An assembly specified in the application dependencies manifest (PlaywrightTests.deps.json) was not found:&#xD;
+    package: 'Microsoft.Bcl.AsyncInterfaces', version: '7.0.0'&#xD;
+    path: 'lib/netstandard2.1/Microsoft.Bcl.AsyncInterfaces.dll'&#xD;
+. Please check the diagnostic logs for more information.</Text>
+      </RunInfo>
+    </RunInfos>
+  </ResultSummary>
+</TestRun>

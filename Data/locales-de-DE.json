@@ -1,8 +1,11 @@
 {
   "locale": "de-DE",
-  "genres": ["Pop","Rock","Schlager","Elektronisch","Folk","Klassik","Indie"],
-  "bandParts": ["Ensemble","Kapelle","Gruppe","Bande"],
-  "firstNames": ["Hans","Lena","Klaus","Frieda","Otto","Greta","Uwe"],
-  "lastNames": ["Müller","Schmidt","Schneider","Fischer","Weber","Meyer"],
-  "albumWords": ["Album","Single","Best Of","Live"]
+  "genres": ["Pop","Rock","Schlager","Elektronisch","Folk","Klassik","Indie","Reggae","Jazz","Blues","Soul","Metal","Country"],
+  "bandParts": ["Ensemble","Kapelle","Gruppe","Bande","Orchester"],
+  "firstNames": ["Hans","Lena","Klaus","Frieda","Otto","Greta","Uwe","Petra","Franz","Anna"],
+  "lastNames": ["Müller","Schmidt","Schneider","Fischer","Weber","Meyer","Wagner","Beck","Vogel"],
+  "albumWords": ["Album","Single","Best Of","Live","Meisterwerk","Edition","Collection","Sammlung"],
+  "reviewAdjectives": ["fesselnd","kraftvoll","melodisch","experimentell","nostalgisch","energisch","beruhigend","meisterhaft","lebendig","innovativ","authentisch","kühn","zart","dynamisch","harmonisch"],
+  "reviewNouns": ["Darbietung","Klang","Produktion","Arrangement","Gesang","Melodie","Komposition","Vortrag","Instrumentation","Struktur","Harmonie","Rhythmus","Beat","Groove"],
+  "lyricsWords": ["la","na","da","oh","hey","ja","ooh","ah","uh","hoo","jaa","liebe","traum","nacht","licht","herz","seele","frei"]
 }

@@ -117,10 +117,12 @@ public class SongGeneratorService
             }
             else
             {
-                // Fallback to Bogus for English data generation with deterministic seed
+                // Fallback to Bogus for data generation with deterministic seed
+                // Note: All locale-specific data comes from external JSON files, never hardcoded
                 title = faker.Hacker.Phrase().Split().Take(2).Aggregate((a, b) => $"{a} {b}");
                 artist = faker.Random.Bool() ? faker.Person.FullName : $"{faker.Person.FirstName} & {faker.Person.LastName}";
-                genre = faker.Random.ArrayElement(new[] { "Rock", "Pop", "Jazz", "Hip-Hop", "Electronic", "Classical", "R&B", "Country", "Folk", "Metal" });
+                // Genres MUST come from locale JSON; use empty fallback if locale missing
+                genre = genres.Length > 0 ? genres[contentRng.Next(genres.Length)] : "Music";
                 album = faker.Random.Bool(0.3f) ? "Single" : string.Join(" ", faker.Random.Words(2));
             }
 
@@ -142,10 +144,13 @@ public class SongGeneratorService
                 likes = baseLikes + (likesRng.NextDouble() < frac ? 1 : 0);
             }
 
-            // Generate a short review sentence using diverse adjectives and nouns
-            var reviewAdj = new[] { "captivating", "raw", "melodic", "experimental", "nostalgic", "energetic", "soothing", "haunting", "masterful", "vibrant", "innovative", "authentic" };
-            var reviewNouns = new[] { "performance", "sound", "production", "arrangement", "vocals", "melody", "composition", "delivery", "instrumentation", "texture" };
-            var review = $"A {reviewAdj[contentRng.Next(reviewAdj.Length)]} {reviewNouns[contentRng.Next(reviewNouns.Length)]} that feels {reviewAdj[contentRng.Next(reviewAdj.Length)]}.";
+            // Generate a short review sentence using locale-specific adjectives and nouns from JSON
+            // IMPORTANT: All review words must come from external JSON locale files, never hardcoded
+            string[] reviewAdj = locale.HasValue && locale.Value.TryGetProperty("reviewAdjectives", out var ra) ? ra.EnumerateArray().Select(x => x.GetString() ?? "good").ToArray() : new[] { "great" };
+            string[] reviewNouns = locale.HasValue && locale.Value.TryGetProperty("reviewNouns", out var rn) ? rn.EnumerateArray().Select(x => x.GetString() ?? "sound").ToArray() : new[] { "sound" };
+            var review = reviewAdj.Length > 0 && reviewNouns.Length > 0 
+                ? $"A {reviewAdj[contentRng.Next(reviewAdj.Length)]} {reviewNouns[contentRng.Next(reviewNouns.Length)]} that feels {reviewAdj[contentRng.Next(reviewAdj.Length)]}.".Trim()
+                : "An interesting production.";
 
             songs.Add(new Song
             {
@@ -371,11 +376,12 @@ public class SongGeneratorService
         return wav;
     }
 
-    // Generate simple timestamped lyrics using locale word lists
+    // Generate simple timestamped lyrics using locale word lists from external JSON files
     public List<(double time, string line)> GenerateLyrics(string language, long seed, int id, int seconds = 12)
     {
         var locale = GetLocale(language);
-        string[] words = locale.HasValue && locale.Value.TryGetProperty("lyricsWords", out var lw) ? lw.EnumerateArray().Select(x => x.GetString() ?? "la").ToArray() : new[] { "la", "na", "da", "oh" };
+        // IMPORTANT: All lyrics words must come from external JSON locale files
+        string[] words = locale.HasValue && locale.Value.TryGetProperty("lyricsWords", out var lw) ? lw.EnumerateArray().Select(x => x.GetString() ?? "la").ToArray() : new[] { "la", "na" };
         int s = (int)((seed ^ id ^ (long)seconds) & 0x7FFFFFFF);
         var rng = new Random(s);
         var lines = new List<(double time, string line)>();
