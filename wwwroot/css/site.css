@@ -20,3 +20,50 @@ html {
 body {
   margin-bottom: 60px;
 }
+
+/* Lyrics display styling */
+.lyric-line {
+  padding: 8px 4px;
+  margin: 4px 0;
+  border-left: 3px solid transparent;
+  transition: all 0.2s ease;
+  font-size: 14px;
+  color: #666;
+  line-height: 1.6;
+}
+
+.lyric-line.active-lyric {
+  background-color: #fff3cd;
+  border-left-color: #ffc107;
+  color: #333;
+  font-weight: 600;
+  padding-left: 8px;
+  transform: translateX(2px);
+}
+
+/* Export buttons styling */
+#export-btn, #export-all-btn {
+  font-weight: 500;
+  transition: all 0.3s ease;
+}
+
+#export-btn:hover:not(:disabled), #export-all-btn:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+}
+
+#export-btn:disabled, #export-all-btn:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+/* Song detail styling */
+.song-detail {
+  background-color: #f8f9fa;
+  transition: max-height 0.3s ease;
+}
+
+.song-detail td {
+  padding: 20px !important;
+  vertical-align: top;
+}

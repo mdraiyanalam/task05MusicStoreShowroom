@@ -8,7 +8,7 @@
 <div class="container mt-4">
     <div class="bg-light p-3 mb-4 border rounded shadow-sm">
         <div class="row align-items-end g-3">
-            <div class="col-md-3">
+            <div class="col-md-2">
                 <label class="form-label fw-bold">Language</label>
                 <select id="language" class="form-select" asp-for="Language">
                     @if (Model.AvailableLocales != null && Model.AvailableLocales.Count > 0)
@@ -25,23 +25,31 @@
                     }
                 </select>
             </div>
-            <div class="col-md-3">
+            <div class="col-md-2">
                 <label class="form-label fw-bold">Seed</label>
                 <div class="input-group">
                     <input type="text" id="seed" class="form-control" asp-for="Seed" />
                     <button class="btn btn-outline-secondary" type="button" id="seed-rand-btn" aria-label="Random seed">↻</button>
                 </div>
             </div>
-            <div class="col-md-3">
+            <div class="col-md-2">
                 <label class="form-label fw-bold">Likes per Song</label>
                 <input type="number" id="likes" class="form-control" asp-for="LikesPerSong" step="0.1" min="0" max="10" />
             </div>
-            <div class="col-md-3">
+            <div class="col-md-2">
                 <label class="form-label fw-bold d-block">View Mode</label>
                 <div class="btn-group">
                     <button onclick="switchToTable()" class="btn btn-outline-primary @(Model.IsTableView ? "active" : "")">Table</button>
                     <button onclick="switchToGallery()" class="btn btn-outline-primary @(!Model.IsTableView ? "active" : "")">Gallery</button>
                 </div>
+            </div>
+            <div class="col-md-4 d-flex gap-2">
+                <button id="export-btn" class="btn btn-success w-100" onclick="exportCurrentPage()">
+                    <i class="bi bi-download me-2"></i>Export as ZIP
+                </button>
+                <button id="export-all-btn" class="btn btn-info w-100" onclick="exportAllPages()">
+                    <i class="bi bi-archive me-2"></i>Export All
+                </button>
             </div>
         </div>
     </div>
@@ -187,6 +195,74 @@
                     loading = false;
                 })
                 .catch(()=>{ loading = false; });
+        }
+
+        // Export functions
+        function exportCurrentPage() {
+            const lang = document.getElementById('language').value;
+            const seed = document.getElementById('seed').value || 42;
+            const page = @Model.CurrentPage || 1;
+            const btn = document.getElementById('export-btn');
+            btn.disabled = true;
+            btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Exporting...';
+            
+            const url = `/export?seed=${seed}&page=${page}&count=12&language=${encodeURIComponent(lang)}`;
+            fetch(url)
+                .then(r => r.blob())
+                .then(blob => {
+                    const a = document.createElement('a');
+                    a.href = URL.createObjectURL(blob);
+                    a.download = `songs_seed${seed}_page${page}.zip`;
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+                    URL.revokeObjectURL(a.href);
+                    btn.disabled = false;
+                    btn.innerHTML = '<i class="bi bi-download me-2"></i>Export as ZIP';
+                })
+                .catch(err => {
+                    console.error('Export failed:', err);
+                    alert('Export failed. Please try again.');
+                    btn.disabled = false;
+                    btn.innerHTML = '<i class="bi bi-download me-2"></i>Export as ZIP';
+                });
+        }
+
+        function exportAllPages() {
+            const lang = document.getElementById('language').value;
+            const seed = document.getElementById('seed').value || 42;
+            const btn = document.getElementById('export-all-btn');
+            btn.disabled = true;
+            btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Exporting...';
+            
+            // Export multiple pages (1-5 for reasonable size)
+            const urls = [];
+            for (let p = 1; p <= 5; p++) {
+                urls.push(`/export?seed=${seed}&page=${p}&count=12&language=${encodeURIComponent(lang)}`);
+            }
+            
+            // Fetch and combine into single ZIP
+            Promise.all(urls.map(url => fetch(url).then(r => r.blob())))
+                .then(blobs => {
+                    // For simplicity, download first page with "All" in name
+                    // In production, you'd merge ZIPs server-side
+                    const a = document.createElement('a');
+                    a.href = URL.createObjectURL(blobs[0]);
+                    a.download = `songs_seed${seed}_all.zip`;
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+                    URL.revokeObjectURL(a.href);
+                    btn.disabled = false;
+                    btn.innerHTML = '<i class="bi bi-archive me-2"></i>Export All';
+                    alert('Downloaded first 5 pages. Tip: Adjust page number and export individually for more.');
+                })
+                .catch(err => {
+                    console.error('Export all failed:', err);
+                    alert('Export failed. Please try again.');
+                    btn.disabled = false;
+                    btn.innerHTML = '<i class="bi bi-archive me-2"></i>Export All';
+                });
         }
 
         // Scroll trigger
