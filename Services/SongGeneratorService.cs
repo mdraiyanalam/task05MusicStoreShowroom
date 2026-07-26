@@ -64,6 +64,25 @@ public class SongGeneratorService
         return faker;
     }
 
+    /// <summary>
+    /// Generates a list of songs with deterministic, seed-based reproducibility.
+    /// 
+    /// SEEDS FEATURE:
+    /// - The seed parameter uniquely determines all song data (titles, artists, albums, genres).
+    /// - Same seed always produces identical data across all invocations and devices.
+    /// - The seed is combined with the page number using XOR (MAD operation) to ensure different pages
+    ///   produce different content while maintaining reproducibility.
+    /// - Changing the seed will change all song data, but the same seed will always reproduce the same results.
+    /// - Parameter independence: changing only the "likes" parameter does NOT affect titles, artists, or genres;
+    ///   it only updates like counts. The other attributes depend solely on seed and record index.
+    /// - Changing language, seed, or likes resets pagination to page 1 (handled by UI).
+    /// 
+    /// SEED COMBINATION ALGORITHM:
+    /// contentSeed = (seed ^ (seed >> 32) ^ (long)page * 397) & 0x7FFFFFFF
+    /// - Uses XOR to combine user seed and page number for different content per page.
+    /// - The magic number 397 (prime) and bit shifting (>> 32) ensure good distribution.
+    /// - Mask with 0x7FFFFFFF keeps result positive for Random(seed) compatibility.
+    /// </summary>
     public List<Song> GenerateSongs(string language, long seed, double likesPerSong, int count, int page)
     {
         int contentSeed = (int)((seed ^ (seed >> 32) ^ (long)page * 397) & 0x7FFFFFFF);
