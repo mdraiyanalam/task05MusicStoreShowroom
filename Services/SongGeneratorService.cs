@@ -359,9 +359,11 @@ public class SongGeneratorService
                 UseShellExecute = false,
                 CreateNoWindow = true
             };
-            using (var p = System.Diagnostics.Process.Start(psi))
+            var p = System.Diagnostics.Process.Start(psi);
+            if (p != null)
             {
-                p.WaitForExit(10000);
+                try { p.WaitForExit(10000); }
+                finally { p.Dispose(); }
             }
             if (File.Exists(tempMp3))
             {

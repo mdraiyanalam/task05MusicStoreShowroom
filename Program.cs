@@ -87,9 +87,11 @@ app.MapGet("/export", (HttpRequest req, SongGeneratorService svc) =>
                         UseShellExecute = false,
                         CreateNoWindow = true
                     };
-                    using (var p = System.Diagnostics.Process.Start(psi))
+                    var p = System.Diagnostics.Process.Start(psi);
+                    if (p != null)
                     {
-                        p.WaitForExit(15000);
+                        try { p.WaitForExit(15000); }
+                        finally { p.Dispose(); }
                     }
                     if (File.Exists(tempMp3))
                     {
@@ -158,9 +160,11 @@ app.MapGet("/export-batch", (HttpRequest req, SongGeneratorService svc) =>
                             UseShellExecute = false,
                             CreateNoWindow = true
                         };
-                        using (var p = System.Diagnostics.Process.Start(psi))
+                        var p = System.Diagnostics.Process.Start(psi);
+                        if (p != null)
                         {
-                            p.WaitForExit(15000);
+                            try { p.WaitForExit(15000); }
+                            finally { p.Dispose(); }
                         }
                         if (File.Exists(tempMp3))
                         {
