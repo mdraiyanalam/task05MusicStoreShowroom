@@ -208,6 +208,42 @@ string SanitizeFileName(string name)
     return name;
 }
 
+// Export a single song as a ZIP containing one MP3 (useful for per-row export button)
+app.MapGet("/export-song", (HttpRequest req, SongGeneratorService svc) =>
+{
+    long seed = long.TryParse(req.Query["seed"], out var sv) ? sv : 42L;
+    int id = int.TryParse(req.Query["id"], out var iv) ? iv : 1;
+    string language = req.Query["Language"].FirstOrDefault() ?? req.Query["language"].FirstOrDefault() ?? "en-US";
+
+    // Generate song metadata to build a safe filename
+    var song = svc.GenerateSongById(language, seed, id);
+    var title = song?.Title ?? $"song_{id}";
+    var album = !string.IsNullOrEmpty(song?.Album) ? song.Album : "Single";
+    var artist = song?.Artist ?? "Unknown";
+
+    using var ms = new MemoryStream();
+    using (var archive = new System.IO.Compression.ZipArchive(ms, System.IO.Compression.ZipArchiveMode.Create, true))
+    {
+        var safeName = SanitizeFileName($"{title} - {album} - {artist}");
+        var mp3Name = safeName + ".mp3";
+        var entry = archive.CreateEntry(mp3Name);
+        using var es = entry.Open();
+        var audio = svc.GenerateAudioMp3(seed, id);
+        var isMp3 = audio.Length > 3 && audio[0] == 0x49 && audio[1] == 0x44 && audio[2] == 0x33;
+        if (isMp3)
+        {
+            es.Write(audio, 0, audio.Length);
+        }
+        else
+        {
+            // Fallback: write WAV bytes directly (client can handle WAV)
+            es.Write(audio, 0, audio.Length);
+        }
+    }
+    ms.Position = 0;
+    return Results.File(ms.ToArray(), "application/zip", $"{SanitizeFileName(title)}-{id}.zip");
+});
+
 // Configure the HTTP request pipeline.
 if (!app.Environment.IsDevelopment())
 {
