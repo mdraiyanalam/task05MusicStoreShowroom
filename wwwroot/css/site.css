@@ -60,12 +60,64 @@ body {
 /* Song detail styling */
 .song-detail {
   background-color: #f8f9fa;
-  transition: max-height 0.3s ease;
+  transition: all 0.3s ease;
+  border-top: 2px solid #e0e0e0;
 }
 
 .song-detail td {
-  padding: 20px !important;
+  padding: 30px !important;
   vertical-align: top;
+}
+
+.song-detail .d-flex {
+  gap: 25px;
+}
+
+.song-detail img {
+  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+  transition: transform 0.3s ease;
+}
+
+.song-detail img:hover {
+  transform: scale(1.02);
+}
+
+.song-detail h5 {
+  font-size: 24px;
+  font-weight: 700;
+  color: #333;
+  margin-bottom: 8px;
+}
+
+.song-detail .text-muted {
+  font-size: 16px;
+  color: #666 !important;
+}
+
+.song-detail .fw-bold {
+  color: #007bff;
+  font-size: 16px;
+}
+
+.song-detail audio {
+  border-radius: 4px;
+  padding: 8px;
+  background-color: #fff;
+  border: 1px solid #ddd;
+}
+
+.song-detail p:first-of-type {
+  font-size: 16px;
+  line-height: 1.6;
+  color: #555;
+  margin-bottom: 16px;
+  font-style: italic;
+}
+
+.song-detail .lyrics-container {
+  border-radius: 4px;
+  background-color: #fff;
+  box-shadow: inset 0 1px 3px rgba(0,0,0,0.1);
 }
 
 /* Export Range and Search Panels */
@@ -122,4 +174,21 @@ body {
 #export-range-spinner {
   width: 1rem;
   height: 1rem;
+}
+
+/* Song row hover effects */
+.song-row {
+  transition: background-color 0.2s ease;
+}
+
+.song-row:hover {
+  background-color: #e8f4f8;
+}
+
+.song-row img {
+  transition: transform 0.2s ease;
+}
+
+.song-row:hover img {
+  transform: scale(1.05);
 }
