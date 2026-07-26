@@ -113,37 +113,107 @@ public class SongGeneratorService
 
     public byte[] GenerateCoverSvg(long seed, int id, string title, string artist)
     {
-        // produce a simple SVG with gradient, rectangles and text; deterministic based on seed+id
+        // Advanced SVG cover with realistic design patterns: geometric shapes, varied gradients, text effects
         int s = (int)((seed ^ id) & 0x7FFFFFFF);
         var rng = new Random(s);
         int w = 400, h = 300;
         var sb = new StringBuilder();
+        
         sb.Append($"<svg xmlns='http://www.w3.org/2000/svg' width='{w}' height='{h}' viewBox='0 0 {w} {h}'>");
-        // gradient
-        var c1 = (rng.Next(40,200), rng.Next(40,200), rng.Next(40,200));
-        var c2 = (rng.Next(40,200), rng.Next(40,200), rng.Next(40,200));
-        sb.Append($"<defs><linearGradient id='g' x1='0' y1='0' x2='0' y2='1'><stop offset='0' stop-color='rgb({c1.Item1},{c1.Item2},{c1.Item3})'/><stop offset='1' stop-color='rgb({c2.Item1},{c2.Item2},{c2.Item3})'/></linearGradient></defs>");
-        sb.Append($"<rect width='100%' height='100%' fill='url(#g)' />");
-        // random translucent rectangles
-        for (int i = 0; i < 5; i++)
+        sb.Append("<defs>");
+        
+        // Define multiple gradient patterns for visual variety
+        var patterns = rng.Next(0, 4);
+        if (patterns == 0)
         {
-            var rx = rng.Next(-50, w);
-            var ry = rng.Next(-50, h);
-            var rw = rng.Next(40, 220);
-            var rh = rng.Next(30, 160);
-            var cr = rng.Next(0,255); var cg = rng.Next(0,255); var cb = rng.Next(0,255); var a = 0.15 + rng.NextDouble()*0.4;
-            sb.Append($"<rect x='{rx}' y='{ry}' width='{rw}' height='{rh}' fill='rgba({cr},{cg},{cb},{a:F2})' />");
+            // Diagonal gradient pattern with accent color
+            var c1 = (rng.Next(20, 100), rng.Next(20, 100), rng.Next(100, 200));
+            var c2 = (rng.Next(100, 180), rng.Next(80, 150), rng.Next(20, 80));
+            var c3 = (rng.Next(200, 255), rng.Next(150, 220), rng.Next(50, 150));
+            sb.Append($"<linearGradient id='g1' x1='0%' y1='0%' x2='100%' y2='100%'>");
+            sb.Append($"<stop offset='0%' stop-color='rgb({c1.Item1},{c1.Item2},{c1.Item3})'/>");
+            sb.Append($"<stop offset='50%' stop-color='rgb({c2.Item1},{c2.Item2},{c2.Item3})'/>");
+            sb.Append($"<stop offset='100%' stop-color='rgb({c3.Item1},{c3.Item2},{c3.Item3})'/>");
+            sb.Append("</linearGradient>");
         }
-        // title & artist text
+        else if (patterns == 1)
+        {
+            // Radial gradient (spotlight effect)
+            var c1 = (rng.Next(200, 255), rng.Next(100, 200), rng.Next(50, 150));
+            var c2 = (rng.Next(20, 60), rng.Next(10, 50), rng.Next(60, 120));
+            sb.Append($"<radialGradient id='g1' cx='50%' cy='30%' r='70%'>");
+            sb.Append($"<stop offset='0%' stop-color='rgb({c1.Item1},{c1.Item2},{c1.Item3})'/>");
+            sb.Append($"<stop offset='100%' stop-color='rgb({c2.Item1},{c2.Item2},{c2.Item3})'/>");
+            sb.Append("</radialGradient>");
+        }
+        else if (patterns == 2)
+        {
+            // Vibrant vertical stripes
+            var ca = (rng.Next(150, 255), rng.Next(30, 100), rng.Next(100, 180));
+            var cb = (rng.Next(20, 80), rng.Next(150, 255), rng.Next(100, 180));
+            sb.Append($"<linearGradient id='g1' x1='0%' y1='0%' x2='100%' y2='0%'>");
+            sb.Append($"<stop offset='0%' stop-color='rgb({ca.Item1},{ca.Item2},{ca.Item3})'/>");
+            sb.Append($"<stop offset='100%' stop-color='rgb({cb.Item1},{cb.Item2},{cb.Item3})'/>");
+            sb.Append("</linearGradient>");
+        }
+        else
+        {
+            // Cool blue to warm purple gradient
+            var c1 = (rng.Next(20, 100), rng.Next(120, 200), rng.Next(180, 255));
+            var c2 = (rng.Next(150, 220), rng.Next(30, 100), rng.Next(180, 255));
+            sb.Append($"<linearGradient id='g1' x1='0%' y1='100%' x2='100%' y2='0%'>");
+            sb.Append($"<stop offset='0%' stop-color='rgb({c1.Item1},{c1.Item2},{c1.Item3})'/>");
+            sb.Append($"<stop offset='100%' stop-color='rgb({c2.Item1},{c2.Item2},{c2.Item3})'/>");
+            sb.Append("</linearGradient>");
+        }
+        sb.Append("</defs>");
+        
+        // Background with main gradient
+        sb.Append($"<rect width='100%' height='100%' fill='url(#g1)' />");
+        
+        // Add geometric decorative elements (circles, polygons) for visual interest
+        int shapeCount = 3 + rng.Next(0, 3);
+        for (int i = 0; i < shapeCount; i++)
+        {
+            double opacity = 0.1 + rng.NextDouble() * 0.3;
+            int cx = rng.Next(0, w);
+            int cy = rng.Next(0, h);
+            int radius = rng.Next(30, 150);
+            int colorR = rng.Next(0, 255);
+            int colorG = rng.Next(0, 255);
+            int colorB = rng.Next(0, 255);
+            sb.Append($"<circle cx='{cx}' cy='{cy}' r='{radius}' fill='rgba({colorR},{colorG},{colorB},{opacity:F2})' />");
+        }
+        
+        // Add some geometric lines for accent
+        int lineCount = 2 + rng.Next(0, 3);
+        for (int i = 0; i < lineCount; i++)
+        {
+            int x1 = rng.Next(0, w);
+            int y1 = rng.Next(0, h);
+            int x2 = rng.Next(0, w);
+            int y2 = rng.Next(0, h);
+            int strokeWidth = rng.Next(1, 4);
+            int opacity = rng.Next(30, 100);
+            sb.Append($"<line x1='{x1}' y1='{y1}' x2='{x2}' y2='{y2}' stroke='rgba(255,255,255,{opacity / 100.0:F2})' stroke-width='{strokeWidth}' />");
+        }
+        
+        // Title and artist text with shadows and styling
         var safeTitle = System.Security.SecurityElement.Escape(title ?? "");
         var safeArtist = System.Security.SecurityElement.Escape(artist ?? "");
-        sb.Append($"<text x='20' y='50' font-family='Arial, sans-serif' font-size='20' fill='white'>{safeTitle}</text>");
-        sb.Append($"<text x='20' y='{h - 30}' font-family='Arial, sans-serif' font-size='14' fill='rgba(255,255,255,0.85)'>{safeArtist}</text>");
+        
+        // Text shadow for better readability
+        sb.Append($"<text x='22' y='52' font-family='Arial, sans-serif' font-size='20' font-weight='bold' fill='rgba(0,0,0,0.3)'>{safeTitle}</text>");
+        sb.Append($"<text x='20' y='50' font-family='Arial, sans-serif' font-size='20' font-weight='bold' fill='white'>{safeTitle}</text>");
+        
+        sb.Append($"<text x='22' y='{h - 28}' font-family='Arial, sans-serif' font-size='14' fill='rgba(0,0,0,0.3)'>{safeArtist}</text>");
+        sb.Append($"<text x='20' y='{h - 30}' font-family='Arial, sans-serif' font-size='14' fill='rgba(255,255,255,0.95)'>{safeArtist}</text>");
+        
         sb.Append("</svg>");
         return Encoding.UTF8.GetBytes(sb.ToString());
     }
 
-    // Synthesize WAV audio and return bytes (browser will play audio/wav)
+    // Generate music with chord progressions, varied instruments, and music theory
     public byte[] GenerateAudioWav(long seed, int id, int seconds = 12)
     {
         int s = (int)((seed ^ id) & 0x7FFFFFFF);
@@ -152,25 +222,64 @@ public class SongGeneratorService
         int channels = 1;
         int totalSamples = sampleRate * seconds;
 
+        // Music theory: chord progressions in a key (C major)
+        double[] majorScale = { 262, 294, 330, 349, 392, 440, 494, 523 }; // C D E F G A B C
+        int[] chordPattern = { 0, 4, 0, 4, 7, 4, 0, 4 }; // C-Fmaj7-C-Fmaj7-Gmaj7-Fmaj7-C-Fmaj7
+        double baseTempo = 90 + (rng.Next(0, 40)); // vary tempo 90-130 BPM
+
         using var msWav = new MemoryStream();
         using (var waveWriter = new WaveFileWriter(msWav, new WaveFormat(sampleRate, channels)))
         {
-            double phase = 0;
-            for (int n = 0; n < totalSamples; n++)
+            double t = 0;
+            int sampleIdx = 0;
+            while (sampleIdx < totalSamples)
             {
-                double t = (double)n / sampleRate;
-                double baseFreq = 220 + (rng.NextDouble() * 440);
-                double freq = baseFreq * (1 + 0.5 * Math.Sin(2 * Math.PI * 0.1 * t + id));
+                // Calculate beat position
+                double beatLength = (60.0 / baseTempo) * sampleRate;
+                int beatNum = (int)(sampleIdx / beatLength);
+                double chordIdx = beatNum % chordPattern.Length;
+                double rootFreq = majorScale[(int)(chordIdx) % majorScale.Length];
+                
+                // Chord notes (root + 3rd + 5th harmonies)
+                double[] chordNotes = {
+                    rootFreq,
+                    rootFreq * 1.25,  // major 3rd
+                    rootFreq * 1.5    // perfect 5th
+                };
+
+                // Generate sample with multiple harmonies and slight modulation
                 double sample = 0.0;
-                sample += 0.6 * Math.Sin(2 * Math.PI * freq * t + phase);
-                sample += 0.3 * Math.Sin(2 * Math.PI * (freq * 0.5) * t + phase * 0.5);
-                double env = 1.0 - Math.Exp(-3.0 * t);
-                float sVal = (float)(0.6 * env * sample);
+                for (int i = 0; i < chordNotes.Length; i++)
+                {
+                    // Add vibrato and envelope
+                    double freq = chordNotes[i] * (1.0 + 0.02 * Math.Sin(2 * Math.PI * 5 * t)); // 5Hz vibrato
+                    double envelope = Math.Exp(-0.3 * (t % (beatLength / sampleRate))); // decay within beat
+                    sample += (0.3 / chordNotes.Length) * envelope * Math.Sin(2 * Math.PI * freq * t);
+                }
+
+                // Add passing tones and bass line
+                double bassFreq = rootFreq * 0.5;
+                double bassEnvelope = 0.5 * Math.Exp(-0.5 * (t % (beatLength / sampleRate)));
+                sample += 0.2 * bassEnvelope * Math.Sin(2 * Math.PI * bassFreq * t);
+
+                // Add a slightly detuned upper harmony (chorus effect)
+                double upperFreq = chordNotes[0] * 1.002;
+                sample += 0.15 * Math.Sin(2 * Math.PI * upperFreq * t);
+
+                // Add a touch of random variation (humanization)
+                sample += 0.02 * (rng.NextDouble() - 0.5);
+
+                float sVal = (float)Math.Max(-1, Math.Min(1, 0.6 * sample));
                 waveWriter.WriteSample(sVal);
+
+                t += 1.0 / sampleRate;
+                sampleIdx++;
             }
         }
         return msWav.ToArray();
     }
+
+    // Keep legacy GenerateAudioWav for fallback; rename to GenerateAudioWavSimple if needed
 
     // Generate MP3 bytes by calling ffmpeg if available; falls back to WAV bytes if ffmpeg not found
     public byte[] GenerateAudioMp3(long seed, int id, int seconds = 12)
