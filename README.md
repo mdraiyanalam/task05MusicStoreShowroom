@@ -144,3 +144,75 @@ Which of the above should I do next? (pick one)
 - Inspect CI logs and propose a specific fix
 - Add Playwright/ffmpeg to CI workflow and open PR to repair build
 - Do all three (takes longer)
+
+
+User experience — What you'll see and how to use the Music Store Showroom
+---------------------------------------------------------------------------
+This single-page app presents a horizontal toolbar with three controls: Language, Seed, and Likes-per-song. Controls update the displayed data immediately (no submit buttons). Use the seed field to enter a 64-bit integer or click the circular ↻ button to generate a random seed.
+
+- Table View: paginated. Click table rows to expand/collapse a detailed panel with a larger cover, preview player, synced lyrics, and a short review. Pagination resets to page 1 when language or seed change.
+- Gallery View: infinite scroll (batches/pages are loaded as you scroll). Changing seed or language resets scroll to the top and the gallery batch counter.
+- Likes-per-song: accepts fractional values (0–10). Adjusting likes updates only the like counts; titles, artists, albums and covers remain stable unless seed or language changes.
+- Export: Export (current page) and Export All (batch ZIP) buttons create server-side ZIP archives of MP3 files. Per-row "Export Song" is available in expanded table details.
+
+Everything is generated server-side on demand; the browser requests a single page/batch from the server and renders it. No user account is required.
+
+Developer Statement / Technical limitations — Why the generated lyrics sound noisy and what would be required to improve them
+-------------------------------------------------------------------------------------------------------
+User-facing summary
+
+The app generates plausible-looking song metadata and short lyric lines, but the lyrics may sound noisy, repetitive, or unnatural. This is expected: the lyric generator composes lines by sampling words from locale-specific lists and placing them into simple templates. It is intentionally offline, deterministic, and lightweight so the entire app remains reproducible and runs without external APIs.
+
+Technical explanation
+
+The current lyric generator does not produce real, coherent song lyrics. It works by randomly selecting words from locale-specific word lists and arranging them using simple hardcoded templates. Because of this approach:
+
+- There is no language model (Transformer, RNN, or LLM)
+- There is no understanding of meaning, grammar, or context
+- There are no rhyme, meter, or syllable-count constraints
+- There is no alignment with musical phrase structure
+
+As a result, the output is only syntactically plausible but semantically noisy and unnatural.
+
+What would be required to generate realistic lyrics
+
+To produce high-quality, natural-sounding lyrics, the system would need one or more of the following:
+
+- A trained language model (Transformer / RNN) or an external LLM (e.g. GPT)
+- Explicit rhyme and meter rules + syllable counting
+- Templates tied to actual musical phrase lengths
+- A properly licensed lyrical corpus for training or few-shot prompting
+
+Trade-offs the developer must accept
+
+Approach                 | Realism | Cost / Complexity | Licensing Risk
+------------------------ | ------- | ----------------- | --------------
+Current (word lists)     | Low     | Very low          | None
+Rule-based + templates   | Medium  | Medium            | Low
+Local language model     | High    | High (training + compute) | Medium
+External LLM API (GPT)   | Very High | Very High (API cost + latency) | High
+
+Developer decision
+
+At this stage of the project the decision was to keep lyric generation lightweight, deterministic, and offline using deterministic word-list composition. Realistic lyric generation is intentionally left as a future improvement requiring significantly more compute, model infra, and careful copyright/licensing handling.
+
+
+Technical notes and next steps (if you want improved lyrics)
+-----------------------------------------------------------
+- Integrate an LLM via an API (fast to prototype but adds cost and dependency and requires careful prompt design and licensing review).
+- Build or adapt a small local language model and add rhyme/meter heuristics (costly in infrastructure and engineering effort).
+- Implement rhyme and syllable-counting rules and tie templates to musical phrase lengths for a middleground improvement with moderate cost.
+
+
+File and data notes
+-------------------
+- Locale text must come from Data/locales-*.json. Do not hardcode region-specific strings in code.
+- Music/audio is generated deterministically from the combined seed+page and record index so the same inputs always produce identical audio output.
+
+
+If you'd like, I can now:
+- Open a small PR with this README change and merge it (recommended)
+- Replace IHtmlHelper.Partial usage with the <partial> tag helper to address MVC1000 warnings
+- Add Playwright and ffmpeg install steps to CI and open a PR to repair the failing build
+
+Which action should I take next?
