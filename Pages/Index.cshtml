@@ -451,10 +451,16 @@
                     filtered.forEach(result => {
                         html += `
                             <div class="mb-3 p-2 border rounded bg-white">
-                                <strong>Song ID ${result.id}: ${result.title}</strong><br/>
-                                <small class="text-muted">
-                                    ${result.lines.map(l => `<span class="badge bg-warning text-dark">${l.text}</span>`).join(' ')}
-                                </small>
+                                <strong>Song ID ${result.id}: ${result.title}</strong>
+                                <div class="mt-2">
+                                    <small class="text-muted">
+                                        ${result.lines.map(l => `<span class="badge bg-warning text-dark me-1">${l.text}</span>`).join(' ')}
+                                    </small>
+                                </div>
+                                <div class="mt-2">
+                                    <button class="btn btn-sm btn-outline-primary" onclick="document.querySelector('.song-row[data-id=\"'+result.id+'\"]').click()">Open</button>
+                                    <button class="btn btn-sm btn-primary ms-2" onclick="exportSong(${result.id})">Export</button>
+                                </div>
                             </div>
                         `;
                     });
