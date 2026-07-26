@@ -54,6 +54,63 @@
         </div>
     </div>
 
+    <!-- Export Range Controls -->
+    <div class="bg-info bg-opacity-10 p-3 mb-4 border rounded d-none" id="export-range-panel">
+        <div class="row align-items-end g-3">
+            <div class="col-md-3">
+                <label class="form-label fw-bold">Export Range</label>
+                <div class="input-group">
+                    <label class="input-group-text">Page</label>
+                    <input type="number" id="export-start-page" class="form-control" value="1" min="1" max="100" />
+                    <label class="input-group-text">to</label>
+                    <input type="number" id="export-end-page" class="form-control" value="5" min="1" max="100" />
+                </div>
+            </div>
+            <div class="col-md-3">
+                <button id="export-range-btn" class="btn btn-success w-100" onclick="exportPageRange()">
+                    <span class="spinner-border spinner-border-sm me-2 d-none" id="export-range-spinner"></span>Export Range
+                </button>
+            </div>
+            <div class="col-md-3">
+                <button class="btn btn-secondary w-100" onclick="toggleExportRange()">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Lyrics Search -->
+    <div class="bg-warning bg-opacity-10 p-3 mb-4 border rounded d-none" id="lyrics-search-panel">
+        <div class="row align-items-end g-3">
+            <div class="col-md-6">
+                <label class="form-label fw-bold">Search Lyrics</label>
+                <input type="text" id="lyrics-search-input" class="form-control" placeholder="Search for words in lyrics..." />
+            </div>
+            <div class="col-md-3">
+                <button class="btn btn-warning w-100" onclick="searchLyrics()">
+                    <i class="bi bi-search me-2"></i>Search
+                </button>
+            </div>
+            <div class="col-md-3">
+                <button class="btn btn-secondary w-100" onclick="toggleLyricsSearch()">Close</button>
+            </div>
+        </div>
+        <div id="lyrics-search-results" class="mt-3 d-none">
+            <div class="alert alert-info">
+                <strong id="search-results-count">0</strong> results found
+                <div id="search-results-list" class="mt-2" style="max-height:200px; overflow:auto;"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Additional Control Buttons Row -->
+    <div class="mb-4">
+        <button class="btn btn-outline-secondary btn-sm" onclick="toggleExportRange()">
+           <i class="bi bi-file-earmark-zip me-1"></i>Export Range
+        </button>
+        <button class="btn btn-outline-secondary btn-sm" onclick="toggleLyricsSearch()">
+           <i class="bi bi-search me-1"></i>Search Lyrics
+        </button>
+    </div>
+
     <div id="content-area">
         @await Html.PartialAsync("_SongListPartial", Model)
     </div>
@@ -235,27 +292,21 @@
             btn.disabled = true;
             btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Exporting...';
             
-            // Export multiple pages (1-5 for reasonable size)
-            const urls = [];
-            for (let p = 1; p <= 5; p++) {
-                urls.push(`/export?seed=${seed}&page=${p}&count=12&language=${encodeURIComponent(lang)}`);
-            }
-            
-            // Fetch and combine into single ZIP
-            Promise.all(urls.map(url => fetch(url).then(r => r.blob())))
-                .then(blobs => {
-                    // For simplicity, download first page with "All" in name
-                    // In production, you'd merge ZIPs server-side
+            // Use server-side batch endpoint for merging ZIPs
+            const url = `/export-batch?seed=${seed}&startPage=1&endPage=5&count=12&language=${encodeURIComponent(lang)}`;
+            fetch(url)
+                .then(r => r.blob())
+                .then(blob => {
                     const a = document.createElement('a');
-                    a.href = URL.createObjectURL(blobs[0]);
-                    a.download = `songs_seed${seed}_all.zip`;
+                    a.href = URL.createObjectURL(blob);
+                    a.download = `songs_seed${seed}_pages1-5.zip`;
                     document.body.appendChild(a);
                     a.click();
                     document.body.removeChild(a);
                     URL.revokeObjectURL(a.href);
                     btn.disabled = false;
                     btn.innerHTML = '<i class="bi bi-archive me-2"></i>Export All';
-                    alert('Downloaded first 5 pages. Tip: Adjust page number and export individually for more.');
+                    alert('Downloaded 60 songs (pages 1-5) as single merged ZIP archive!');
                 })
                 .catch(err => {
                     console.error('Export all failed:', err);
@@ -263,6 +314,116 @@
                     btn.disabled = false;
                     btn.innerHTML = '<i class="bi bi-archive me-2"></i>Export All';
                 });
+        }
+
+        function exportPageRange() {
+            const lang = document.getElementById('language').value;
+            const seed = document.getElementById('seed').value || 42;
+            const startPage = parseInt(document.getElementById('export-start-page').value) || 1;
+            const endPage = parseInt(document.getElementById('export-end-page').value) || startPage;
+            const btn = document.getElementById('export-range-btn');
+            const spinner = document.getElementById('export-range-spinner');
+            
+            btn.disabled = true;
+            spinner.classList.remove('d-none');
+            
+            const url = `/export-batch?seed=${seed}&startPage=${startPage}&endPage=${endPage}&count=12&language=${encodeURIComponent(lang)}`;
+            fetch(url)
+                .then(r => r.blob())
+                .then(blob => {
+                    const a = document.createElement('a');
+                    a.href = URL.createObjectURL(blob);
+                    a.download = `songs_seed${seed}_pages${startPage}-${endPage}.zip`;
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+                    URL.revokeObjectURL(a.href);
+                    btn.disabled = false;
+                    spinner.classList.add('d-none');
+                    alert(`Downloaded ${(endPage - startPage + 1) * 12} songs (pages ${startPage}-${endPage})`);
+                })
+                .catch(err => {
+                    console.error('Export range failed:', err);
+                    alert('Export failed. Please try again.');
+                    btn.disabled = false;
+                    spinner.classList.add('d-none');
+                });
+        }
+
+        function toggleExportRange() {
+            const panel = document.getElementById('export-range-panel');
+            panel.classList.toggle('d-none');
+        }
+
+        function toggleLyricsSearch() {
+            const panel = document.getElementById('lyrics-search-panel');
+            panel.classList.toggle('d-none');
+            if (!panel.classList.contains('d-none')) {
+                document.getElementById('lyrics-search-input').focus();
+            }
+        }
+
+        function searchLyrics() {
+            const searchTerm = document.getElementById('lyrics-search-input').value.toLowerCase().trim();
+            if (!searchTerm) {
+                alert('Please enter search term');
+                return;
+            }
+
+            const resultsPanel = document.getElementById('lyrics-search-results');
+            const resultsList = document.getElementById('search-results-list');
+            const resultsCount = document.getElementById('search-results-count');
+            
+            resultsList.innerHTML = '<p class="text-muted">Searching...</p>';
+            resultsPanel.classList.remove('d-none');
+            
+            // Get all visible songs and search their lyrics
+            const matches = [];
+            const songRows = document.querySelectorAll('.song-row');
+            
+            Promise.all(Array.from(songRows).map(row => {
+                const id = row.getAttribute('data-id');
+                const title = row.querySelector('td:nth-child(3)').textContent;
+                const lyricsUrl = row.nextElementSibling?.querySelector('.lyrics-container')?.getAttribute('data-lyrics-url');
+                
+                if (!lyricsUrl) return Promise.resolve(null);
+                
+                return fetch(lyricsUrl)
+                    .then(r => r.json())
+                    .then(lines => {
+                        const matchingLines = lines.filter(l => l.text.toLowerCase().includes(searchTerm));
+                        if (matchingLines.length > 0) {
+                            return { id, title, lines: matchingLines };
+                        }
+                        return null;
+                    })
+                    .catch(() => null);
+            }))
+            .then(results => {
+                const filtered = results.filter(r => r !== null);
+                resultsCount.textContent = filtered.length;
+                
+                if (filtered.length === 0) {
+                    resultsList.innerHTML = '<p class="text-muted">No matches found.</p>';
+                } else {
+                    let html = '';
+                    filtered.forEach(result => {
+                        html += `
+                            <div class="mb-3 p-2 border rounded bg-white">
+                                <strong>Song ID ${result.id}: ${result.title}</strong><br/>
+                                <small class="text-muted">
+                                    ${result.lines.map(l => `<span class="badge bg-warning text-dark">${l.text}</span>`).join(' ')}
+                                </small>
+                            </div>
+                        `;
+                    });
+                    resultsList.innerHTML = html;
+                }
+            })
+            .catch(err => {
+                console.error('Search failed:', err);
+                resultsList.innerHTML = '<p class="text-danger">Search failed.</p>';
+            });
         }
 
         // Scroll trigger
