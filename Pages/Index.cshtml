@@ -152,7 +152,7 @@
         // Live listeners
         document.getElementById('language').addEventListener('change', () => updateData(true));
         document.getElementById('seed').addEventListener('input', () => updateData(true));
-        document.getElementById('likes').addEventListener('input', () => updateData(false)); // likes only updates counts
+        document.getElementById('likes').addEventListener('input', () => updateLikesOnly()); // likes only updates counts
         document.getElementById('seed-rand-btn').addEventListener('click', generateRandomSeed);
 
         function generateRandomSeed() {
@@ -252,6 +252,47 @@
                     loading = false;
                 })
                 .catch(()=>{ loading = false; });
+        }
+
+        // Update only like counts without regenerating titles/artists
+        function updateLikesOnly() {
+            clearTimeout(debounceTimer);
+            debounceTimer = setTimeout(() => {
+                const lang = document.getElementById('language').value;
+                const seed = document.getElementById('seed').value || 42;
+                const likes = document.getElementById('likes').value || 3.7;
+                const page = @Model.CurrentPage || 1;
+                const count = 12;
+                const url = `/likes?seed=${seed}&page=${page}&count=${count}&LikesPerSong=${encodeURIComponent(likes)}&language=${encodeURIComponent(lang)}`;
+
+                fetch(url)
+                    .then(r => r.json())
+                    .then(data => {
+                        // Update any visible rows/cards with new like counts
+                        for (const item of data) {
+                            // Table rows
+                            const row = document.querySelector(`.song-row[data-id="${item.id}"]`);
+                            if (row) {
+                                const likesEl = row.querySelector('.likes-count');
+                                if (likesEl) {
+                                    // If likes-count contains a badge, update badge text, otherwise replace
+                                    const badge = likesEl.querySelector('.badge');
+                                    if (badge) badge.textContent = item.likes.toLocaleString();
+                                    else likesEl.textContent = item.likes.toLocaleString();
+                                }
+                            }
+                            // Expanded detail badge
+                            const detail = document.getElementById('detail-' + item.id);
+                            if (detail) {
+                                const badge = detail.querySelector('.badge');
+                                if (badge) badge.textContent = item.likes.toLocaleString();
+                            }
+                        }
+                    })
+                    .catch(err => {
+                        console.error('Likes update failed:', err);
+                    });
+            }, 150);
         }
 
         // Export functions
