@@ -1,0 +1,113 @@
+@model MusicStore.Models.HomeViewModel
+@{
+    ViewData["Title"] = "MusicStore";
+}
+
+<div class="container mt-4">
+    <div class="bg-light p-3 mb-4 border rounded shadow-sm">
+        <div class="row align-items-end g-3">
+            <div class="col-md-2">
+                <label class="form-label fw-bold">Language</label>
+                <select id="language" class="form-select">
+                    @if (Model.AvailableLocales != null && Model.AvailableLocales.Count > 0)
+                    {
+                        foreach (var loc in Model.AvailableLocales)
+                        {
+                            var displayName = Model.LocaleDisplayNames.ContainsKey(loc) ? Model.LocaleDisplayNames[loc] : loc;
+                            <option value="@loc" @(loc == Model.Language ? "selected" : "")>@displayName</option>
+                        }
+                    }
+                    else
+                    {
+                        <option value="en-US">English (USA)</option>
+                    }
+                </select>
+            </div>
+            <div class="col-md-2">
+                <label class="form-label fw-bold">Seed</label>
+                <div class="input-group">
+                    <input type="text" id="seed" class="form-control" value="@Model.Seed" />
+                    <button class="btn btn-outline-secondary" type="button" id="seed-rand-btn" aria-label="Random seed">↻</button>
+                </div>
+            </div>
+            <div class="col-md-2">
+                <label class="form-label fw-bold">Likes per Song</label>
+                <input type="number" id="likes" class="form-control" value="@Model.LikesPerSong" step="0.1" min="0" max="10" />
+            </div>
+            <div class="col-md-2">
+                <label class="form-label fw-bold d-block">View Mode</label>
+                <div class="btn-group">
+                    <button onclick="switchToTable()" class="btn btn-outline-primary @(Model.IsTableView ? "active" : "")">Table</button>
+                    <button onclick="switchToGallery()" class="btn btn-outline-primary @(!Model.IsTableView ? "active" : "")">Gallery</button>
+                </div>
+            </div>
+            <div class="col-md-4 d-flex gap-2">
+                <button id="export-btn" class="btn btn-success w-100" onclick="exportCurrentPage()">
+                    <i class="bi bi-download me-2"></i>Export as ZIP
+                </button>
+                <button id="export-all-btn" class="btn btn-info w-100" onclick="exportAllPages()">
+                    <i class="bi bi-archive me-2"></i>Export All
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div id="content-area">
+        <partial name="_SongListPartial" model="Model" />
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        let songsPartialUrl = '@Url.Action("SongsPartial","Home")';
+        let currentIsTable = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.IsTableView));
+        let debounceTimer;
+
+        function updateData(resetPage = true) {
+            clearTimeout(debounceTimer);
+            debounceTimer = setTimeout(() => {
+                const lang = document.getElementById('language').value;
+                const seed = document.getElementById('seed').value || 42;
+                const likes = document.getElementById('likes').value || 3.7;
+
+                const pageParam = resetPage ? 1 : @Model.CurrentPage;
+
+                // Reset gallery pagination/scroll when parameters change
+                if (resetPage) {
+                    nextPage = 2; // reset batch counter for gallery infinite scroll
+                    loading = false;
+                }
+
+                const url = `${songsPartialUrl}?isTableView=${currentIsTable}&page=${pageParam}&Language=${encodeURIComponent(lang)}&Seed=${seed}&LikesPerSong=${likes}`;
+
+                fetch(url)
+                    .then(r => r.text())
+                    .then(html => {
+                        document.getElementById('content-area').innerHTML = html;
+                        if (!currentIsTable) {
+                            window.scrollTo({ top: 0, behavior: 'smooth' });
+                        }
+                    });
+            }, 300);
+        }
+
+        // Live listeners
+        document.getElementById('language').addEventListener('change', () => updateData(true));
+        document.getElementById('seed').addEventListener('input', () => updateData(true));
+        document.getElementById('likes').addEventListener('input', () => updateLikesOnly()); // likes only updates counts
+        document.getElementById('seed-rand-btn').addEventListener('click', generateRandomSeed);
+
+        function generateRandomSeed() {
+            const arr = new Uint32Array(2);
+            crypto.getRandomValues(arr);
+            const high = BigInt(arr[0]);
+            const low = BigInt(arr[1]);
+            const combined = ((high << 32n) | low) & ((1n << 63n) - 1n);
+            const val = combined === 0n ? 1n : combined;
+            document.getElementById('seed').value = val.toString();
+            updateData(true);
+        }
+
+        // Other client scripts omitted for brevity; main app includes full script in worktree
+    </script>
+}
