@@ -12,6 +12,7 @@
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
       <PrivateAssets>all</PrivateAssets>
     </PackageReference>
+    <!-- Third-party libraries for code reuse and maintainability -->
     <PackageReference Include="Bogus" Version="34.0.2" />
     <PackageReference Include="NAudio" Version="2.2.0" />
     <!-- Replaced ImageSharp cover generation with SVG renderer to avoid advisories -->

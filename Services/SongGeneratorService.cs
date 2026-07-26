@@ -1,15 +1,21 @@
-﻿using MusicStore.Models;
+using MusicStore.Models;
 using System.Text.Json;
 using System.IO;
 using System.Text;
 using NAudio.Wave;
+using Bogus;
 
 namespace MusicStore.Services;
 
+/// <summary>
+/// Service for generating music store data using third-party libraries for maintainability.
+/// Uses Bogus library for data generation and NAudio for music synthesis.
+/// </summary>
 public class SongGeneratorService
 {
     private readonly string _dataPath;
     private readonly Dictionary<string, JsonElement> _locales = new();
+    private readonly Dictionary<int, Faker> _fakerCache = new();
 
     public SongGeneratorService(IWebHostEnvironment env)
     {
@@ -44,10 +50,25 @@ public class SongGeneratorService
         return _locales.Values.FirstOrDefault();
     }
 
+    /// <summary>
+    /// Get or create a Faker instance for the given seed, ensuring deterministic generation.
+    /// </summary>
+    private Faker GetFaker(int seed)
+    {
+        if (!_fakerCache.TryGetValue(seed, out var faker))
+        {
+            faker = new Faker();
+            Randomizer.Seed = new Random(seed);
+            _fakerCache[seed] = faker;
+        }
+        return faker;
+    }
+
     public List<Song> GenerateSongs(string language, long seed, double likesPerSong, int count, int page)
     {
         int contentSeed = (int)((seed ^ (seed >> 32) ^ (long)page * 397) & 0x7FFFFFFF);
         var contentRng = new Random(contentSeed);
+        var faker = GetFaker(contentSeed);
 
         var locale = GetLocale(language);
 
@@ -61,13 +82,28 @@ public class SongGeneratorService
         for (int i = 0; i < count; i++)
         {
             var globalId = (page - 1) * count + i + 1;
-            var title = $"{firsts[contentRng.Next(firsts.Length)]} {lasts[contentRng.Next(lasts.Length)]}";
-            var artist = (contentRng.NextDouble() < 0.4)
-                ? $"{firsts[contentRng.Next(firsts.Length)]} {lasts[contentRng.Next(lasts.Length)]}"
-                : $"{firsts[contentRng.Next(firsts.Length)]} & {lasts[contentRng.Next(lasts.Length)]}";
-
-            var genre = genres[contentRng.Next(genres.Length)];
-            var album = albums[contentRng.Next(albums.Length)];
+            
+            // Use locale-specific data if available, fallback to Bogus for English data
+            string title, artist, genre, album;
+            
+            if (locale.HasValue && firsts.Length > 0 && lasts.Length > 0)
+            {
+                // Use locale data for deterministic, reproducible generation
+                title = $"{firsts[contentRng.Next(firsts.Length)]} {lasts[contentRng.Next(lasts.Length)]}";
+                artist = (contentRng.NextDouble() < 0.4)
+                    ? $"{firsts[contentRng.Next(firsts.Length)]} {lasts[contentRng.Next(lasts.Length)]}"
+                    : $"{firsts[contentRng.Next(firsts.Length)]} & {lasts[contentRng.Next(lasts.Length)]}";
+                genre = genres[contentRng.Next(genres.Length)];
+                album = contentRng.NextDouble() < 0.3 ? "Single" : albums[contentRng.Next(albums.Length)];
+            }
+            else
+            {
+                // Fallback to Bogus for English data generation with deterministic seed
+                title = faker.Hacker.Phrase().Split().Take(2).Aggregate((a, b) => $"{a} {b}");
+                artist = faker.Random.Bool() ? faker.Person.FullName : $"{faker.Person.FirstName} & {faker.Person.LastName}";
+                genre = faker.Random.ArrayElement(new[] { "Rock", "Pop", "Jazz", "Hip-Hop", "Electronic", "Classical", "R&B", "Country", "Folk", "Metal" });
+                album = faker.Random.Bool(0.3f) ? "Single" : string.Join(" ", faker.Random.Words(2));
+            }
 
             int likes;
             if (likesPerSong <= 0)
@@ -87,13 +123,13 @@ public class SongGeneratorService
                 likes = baseLikes + (likesRng.NextDouble() < frac ? 1 : 0);
             }
 
-                // generate a short review sentence
-                var reviewAdj = new[] { "captivating", "raw", "melodic", "experimental", "nostalgic", "energetic", "soothing", "haunting" };
-                var reviewNouns = new[] { "performance", "sound", "production", "arrangement", "vocals", "melody" };
-                var review = $"A {reviewAdj[contentRng.Next(reviewAdj.Length)]} {reviewNouns[contentRng.Next(reviewNouns.Length)]} that feels {reviewAdj[contentRng.Next(reviewAdj.Length)]}.";
+            // Generate a short review sentence using diverse adjectives and nouns
+            var reviewAdj = new[] { "captivating", "raw", "melodic", "experimental", "nostalgic", "energetic", "soothing", "haunting", "masterful", "vibrant", "innovative", "authentic" };
+            var reviewNouns = new[] { "performance", "sound", "production", "arrangement", "vocals", "melody", "composition", "delivery", "instrumentation", "texture" };
+            var review = $"A {reviewAdj[contentRng.Next(reviewAdj.Length)]} {reviewNouns[contentRng.Next(reviewNouns.Length)]} that feels {reviewAdj[contentRng.Next(reviewAdj.Length)]}.";
 
-                songs.Add(new Song
-                {
+            songs.Add(new Song
+            {
                     Id = globalId,
                     Title = title,
                     Artist = artist,
