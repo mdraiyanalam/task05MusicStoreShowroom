@@ -2,9 +2,9 @@
 
 @if (Model.IsTableView)
 {
-    @Html.Partial("_TableView", Model)
+    <partial name="_TableView" model="Model" />
 }
 else
 {
-    @Html.Partial("_GalleryView", Model)
+    <partial name="_GalleryView" model="Model" />
 }
