@@ -114,6 +114,78 @@ app.MapGet("/export", (HttpRequest req, SongGeneratorService svc) =>
     return Results.File(ms.ToArray(), "application/zip", $"songs-{seed}-p{page}.zip");
 });
 
+// Batch export endpoint for multiple pages
+app.MapGet("/export-batch", (HttpRequest req, SongGeneratorService svc) =>
+{
+    // expects query: seed, startPage, endPage, count, Language
+    long seed = long.TryParse(req.Query["seed"], out var sv) ? sv : 42L;
+    int startPage = int.TryParse(req.Query["startPage"], out var spv) ? spv : 1;
+    int endPage = int.TryParse(req.Query["endPage"], out var epv) ? epv : Math.Max(5, startPage);
+    int count = int.TryParse(req.Query["count"], out var cv) ? cv : 12;
+    string language = req.Query["Language"].FirstOrDefault() ?? req.Query["language"].FirstOrDefault() ?? "en-US";
+
+    using var ms = new MemoryStream();
+    using (var archive = new System.IO.Compression.ZipArchive(ms, System.IO.Compression.ZipArchiveMode.Create, true))
+    {
+        for (int page = startPage; page <= endPage; page++)
+        {
+            var songs = svc.GenerateSongs(language, seed, 0, count, page);
+            foreach (var song in songs)
+            {
+                var safeName = SanitizeFileName($"[P{page}] {song.Title} - {(!string.IsNullOrEmpty(song.Album) ? song.Album : "Single")} - {song.Artist}");
+                var mp3Name = safeName + ".mp3";
+                var entry = archive.CreateEntry(mp3Name);
+                using var es = entry.Open();
+                var audio = svc.GenerateAudioMp3(seed, song.Id);
+                var isMp3 = audio.Length > 3 && audio[0] == 0x49 && audio[1] == 0x44 && audio[2] == 0x33;
+                if (isMp3)
+                {
+                    es.Write(audio, 0, audio.Length);
+                }
+                else
+                {
+                    try
+                    {
+                        var tempWav = Path.Combine(Path.GetTempPath(), $"batch_{seed}_{song.Id}_{Guid.NewGuid()}.wav");
+                        var tempMp3 = Path.Combine(Path.GetTempPath(), $"batch_{seed}_{song.Id}_{Guid.NewGuid()}.mp3");
+                        File.WriteAllBytes(tempWav, audio);
+                        var psi = new System.Diagnostics.ProcessStartInfo
+                        {
+                            FileName = "ffmpeg",
+                            Arguments = $"-y -i \"{tempWav}\" -b:a 128k \"{tempMp3}\"",
+                            RedirectStandardOutput = true,
+                            RedirectStandardError = true,
+                            UseShellExecute = false,
+                            CreateNoWindow = true
+                        };
+                        using (var p = System.Diagnostics.Process.Start(psi))
+                        {
+                            p.WaitForExit(15000);
+                        }
+                        if (File.Exists(tempMp3))
+                        {
+                            var mp3bytes = File.ReadAllBytes(tempMp3);
+                            es.Write(mp3bytes, 0, mp3bytes.Length);
+                        }
+                        else
+                        {
+                            es.Write(audio, 0, audio.Length);
+                        }
+                        try { File.Delete(tempWav); } catch { }
+                        try { File.Delete(tempMp3); } catch { }
+                    }
+                    catch
+                    {
+                        es.Write(audio, 0, audio.Length);
+                    }
+                }
+            }
+        }
+    }
+    ms.Position = 0;
+    return Results.File(ms.ToArray(), "application/zip", $"songs-{seed}-p{startPage}-{endPage}.zip");
+});
+
 string SanitizeFileName(string name)
 {
     foreach (var c in Path.GetInvalidFileNameChars()) name = name.Replace(c, '_');
