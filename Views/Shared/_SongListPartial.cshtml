@@ -1,0 +1,10 @@
+@model MusicStore.Models.HomeViewModel
+
+@if (Model.IsTableView)
+{
+    @Html.Partial("_TableView", Model)
+}
+else
+{
+    @Html.Partial("_GalleryView", Model)
+}
