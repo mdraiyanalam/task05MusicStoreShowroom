@@ -52,6 +52,63 @@
         </div>
     </div>
 
+    <!-- Export Range Controls -->
+    <div class="bg-info bg-opacity-10 p-3 mb-4 border rounded d-none" id="export-range-panel">
+        <div class="row align-items-end g-3">
+            <div class="col-md-3">
+                <label class="form-label fw-bold">Export Range</label>
+                <div class="input-group">
+                    <label class="input-group-text">Page</label>
+                    <input type="number" id="export-start-page" class="form-control" value="1" min="1" max="100" />
+                    <label class="input-group-text">to</label>
+                    <input type="number" id="export-end-page" class="form-control" value="5" min="1" max="100" />
+                </div>
+            </div>
+            <div class="col-md-3">
+                <button id="export-range-btn" class="btn btn-success w-100" onclick="exportPageRange()">
+                    <span class="spinner-border spinner-border-sm me-2 d-none" id="export-range-spinner"></span>Export Range
+                </button>
+            </div>
+            <div class="col-md-3">
+                <button class="btn btn-secondary w-100" onclick="toggleExportRange()">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Lyrics Search -->
+    <div class="bg-warning bg-opacity-10 p-3 mb-4 border rounded d-none" id="lyrics-search-panel">
+        <div class="row align-items-end g-3">
+            <div class="col-md-6">
+                <label class="form-label fw-bold">Search Lyrics</label>
+                <input type="text" id="lyrics-search-input" class="form-control" placeholder="Search for words in lyrics..." />
+            </div>
+            <div class="col-md-3">
+                <button class="btn btn-warning w-100" onclick="searchLyrics()">
+                    <i class="bi bi-search me-2"></i>Search
+                </button>
+            </div>
+            <div class="col-md-3">
+                <button class="btn btn-secondary w-100" onclick="toggleLyricsSearch()">Close</button>
+            </div>
+        </div>
+        <div id="lyrics-search-results" class="mt-3 d-none">
+            <div class="alert alert-info">
+                <strong id="search-results-count">0</strong> results found
+                <div id="search-results-list" class="mt-2" style="max-height:200px; overflow:auto;"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Additional Control Buttons Row -->
+    <div class="mb-4">
+        <button class="btn btn-outline-secondary btn-sm" onclick="toggleExportRange()">
+           <i class="bi bi-file-earmark-zip me-1"></i>Export Range
+        </button>
+        <button class="btn btn-outline-secondary btn-sm" onclick="toggleLyricsSearch()">
+           <i class="bi bi-search me-1"></i>Search Lyrics
+        </button>
+    </div>
+
     <div id="content-area">
         <partial name="_SongListPartial" model="Model" />
     </div>
@@ -98,8 +155,10 @@
         document.getElementById('seed-rand-btn').addEventListener('click', generateRandomSeed);
 
         function generateRandomSeed() {
+            // generate a cryptographically random 63-bit positive integer
             const arr = new Uint32Array(2);
             crypto.getRandomValues(arr);
+            // combine into 53+ bits safely using BigInt
             const high = BigInt(arr[0]);
             const low = BigInt(arr[1]);
             const combined = ((high << 32n) | low) & ((1n << 63n) - 1n);
@@ -108,6 +167,346 @@
             updateData(true);
         }
 
-        // Other client scripts omitted for brevity; main app includes full script in worktree
+        // Row expand/collapse behavior for table view and lyrics sync
+        document.addEventListener('click', function (e) {
+            const tr = e.target.closest && e.target.closest('.song-row');
+            if (!tr) return;
+            const id = tr.getAttribute('data-id');
+            const detail = document.getElementById('detail-' + id);
+            if (!detail) return;
+            detail.classList.toggle('d-none');
+            // if expanding, load lyrics and attach player sync
+            if (!detail.classList.contains('d-none')) {
+                const lyricsContainer = detail.querySelector('.lyrics-container');
+                const player = detail.querySelector('audio.song-player');
+                if (lyricsContainer && player) {
+                    const url = lyricsContainer.getAttribute('data-lyrics-url');
+                    if (url && lyricsContainer.innerText.includes('Loading lyrics')) {
+                        fetch(url).then(r => r.json()).then(lines => {
+                            lyricsContainer.innerHTML = '';
+                            for (const l of lines) {
+                                const p = document.createElement('div');
+                                p.className = 'lyric-line';
+                                p.setAttribute('data-time', l.time);
+                                p.textContent = l.text;
+                                lyricsContainer.appendChild(p);
+                            }
+                        });
+                    }
+                    // attach sync
+                    player.removeEventListener('timeupdate', window.__lyricsSyncHandler);
+                    window.__lyricsSyncHandler = function () {
+                        try {
+                            const t = player.currentTime;
+                            const lines = detail.querySelectorAll('.lyric-line');
+                            let active = null;
+                            for (const ln of lines) {
+                                const lt = parseFloat(ln.getAttribute('data-time')) || 0;
+                                if (lt <= t) active = ln;
+                                ln.classList.remove('active-lyric');
+                            }
+                            if (active) {
+                                active.classList.add('active-lyric');
+                                active.scrollIntoView({ block: 'center', behavior: 'smooth' });
+                            }
+                        } catch (e) { }
+                    };
+                    player.addEventListener('timeupdate', window.__lyricsSyncHandler);
+                }
+            }
+            // update likes when only likes changed via input; otherwise full data refreshed elsewhere
+        });
+
+        function switchToTable() {
+            const lang = document.getElementById('language').value;
+            const seed = document.getElementById('seed').value || 42;
+            window.location.href = `/?isTableView=true&Language=${encodeURIComponent(lang)}&Seed=${seed}`;
+        }
+
+        function switchToGallery() {
+            const lang = document.getElementById('language').value;
+            const seed = document.getElementById('seed').value || 42;
+            window.location.href = `/?isTableView=false&Language=${encodeURIComponent(lang)}&Seed=${seed}`;
+        }
+
+        let loading = false;
+        let nextPage = 2;
+
+        function loadMore() {
+            if (loading || currentIsTable) return;
+            loading = true;
+
+            const lang = document.getElementById('language').value;
+            const seed = document.getElementById('seed').value || 42;
+            const likes = document.getElementById('likes').value || 3.7;
+
+            const url = `${songsPartialUrl}?isTableView=false&page=${nextPage}&Language=${encodeURIComponent(lang)}&Seed=${seed}&LikesPerSong=${likes}`;
+            fetch(url)
+                .then(r => r.text())
+                .then(html => {
+                    const temp = document.createElement('div');
+                    temp.innerHTML = html;
+                    const newRow = temp.querySelector('.row');
+                    if (newRow) {
+                        const targetRow = document.querySelector('#content-area .row');
+                        if (targetRow) targetRow.append(...newRow.children);
+                        else document.getElementById('content-area').appendChild(newRow);
+                    }
+                    nextPage++;
+                    loading = false;
+                })
+                .catch(()=>{ loading = false; });
+        }
+
+        // Update only like counts without regenerating titles/artists
+        function updateLikesOnly() {
+            clearTimeout(debounceTimer);
+            debounceTimer = setTimeout(() => {
+                const lang = document.getElementById('language').value;
+                const seed = document.getElementById('seed').value || 42;
+                const likes = document.getElementById('likes').value || 3.7;
+                const page = @Model.CurrentPage || 1;
+                const count = 12;
+                const url = `/likes?seed=${seed}&page=${page}&count=${count}&LikesPerSong=${encodeURIComponent(likes)}&language=${encodeURIComponent(lang)}`;
+
+                fetch(url)
+                    .then(r => r.json())
+                    .then(data => {
+                        // Update any visible rows/cards with new like counts
+                        for (const item of data) {
+                            // Table rows
+                            const row = document.querySelector(`.song-row[data-id="${item.id}"]`);
+                            if (row) {
+                                const likesEl = row.querySelector('.likes-count');
+                                if (likesEl) {
+                                    // If likes-count contains a badge, update badge text, otherwise replace
+                                    const badge = likesEl.querySelector('.badge');
+                                    if (badge) badge.textContent = item.likes.toLocaleString();
+                                    else likesEl.textContent = item.likes.toLocaleString();
+                                }
+                            }
+                            // Expanded detail badge
+                            const detail = document.getElementById('detail-' + item.id);
+                            if (detail) {
+                                const badge = detail.querySelector('.badge');
+                                if (badge) badge.textContent = item.likes.toLocaleString();
+                            }
+                        }
+                    })
+                    .catch(err => {
+                        console.error('Likes update failed:', err);
+                    });
+            }, 150);
+        }
+
+        // Export functions
+        function exportCurrentPage() {
+            const lang = document.getElementById('language').value;
+            const seed = document.getElementById('seed').value || 42;
+            const page = @Model.CurrentPage || 1;
+            const btn = document.getElementById('export-btn');
+            btn.disabled = true;
+            btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Exporting...';
+            
+            const url = `/export?seed=${seed}&page=${page}&count=12&language=${encodeURIComponent(lang)}`;
+            fetch(url)
+                .then(r => r.blob())
+                .then(blob => {
+                    const a = document.createElement('a');
+                    a.href = URL.createObjectURL(blob);
+                    a.download = `songs_seed${seed}_page${page}.zip`;
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+                    URL.revokeObjectURL(a.href);
+                    btn.disabled = false;
+                    btn.innerHTML = '<i class="bi bi-download me-2"></i>Export as ZIP';
+                })
+                .catch(err => {
+                    console.error('Export failed:', err);
+                    alert('Export failed. Please try again.');
+                    btn.disabled = false;
+                    btn.innerHTML = '<i class="bi bi-download me-2"></i>Export as ZIP';
+                });
+        }
+
+        function exportAllPages() {
+            const lang = document.getElementById('language').value;
+            const seed = document.getElementById('seed').value || 42;
+            const btn = document.getElementById('export-all-btn');
+            btn.disabled = true;
+            btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Exporting...';
+            
+            // Use server-side batch endpoint for merging ZIPs
+            const url = `/export-batch?seed=${seed}&startPage=1&endPage=5&count=12&language=${encodeURIComponent(lang)}`;
+            fetch(url)
+                .then(r => r.blob())
+                .then(blob => {
+                    const a = document.createElement('a');
+                    a.href = URL.createObjectURL(blob);
+                    a.download = `songs_seed${seed}_pages1-5.zip`;
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+                    URL.revokeObjectURL(a.href);
+                    btn.disabled = false;
+                    btn.innerHTML = '<i class="bi bi-archive me-2"></i>Export All';
+                    alert('Downloaded 60 songs (pages 1-5) as single merged ZIP archive!');
+                })
+                .catch(err => {
+                    console.error('Export all failed:', err);
+                    alert('Export failed. Please try again.');
+                    btn.disabled = false;
+                    btn.innerHTML = '<i class="bi bi-archive me-2"></i>Export All';
+                });
+        }
+
+        function exportPageRange() {
+            const lang = document.getElementById('language').value;
+            const seed = document.getElementById('seed').value || 42;
+            const startPage = parseInt(document.getElementById('export-start-page').value) || 1;
+            const endPage = parseInt(document.getElementById('export-end-page').value) || startPage;
+            const btn = document.getElementById('export-range-btn');
+            const spinner = document.getElementById('export-range-spinner');
+            
+            btn.disabled = true;
+            spinner.classList.remove('d-none');
+            
+            const url = `/export-batch?seed=${seed}&startPage=${startPage}&endPage=${endPage}&count=12&language=${encodeURIComponent(lang)}`;
+            fetch(url)
+                .then(r => r.blob())
+                .then(blob => {
+                    const a = document.createElement('a');
+                    a.href = URL.createObjectURL(blob);
+                    a.download = `songs_seed${seed}_pages${startPage}-${endPage}.zip`;
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+                    URL.revokeObjectURL(a.href);
+                    btn.disabled = false;
+                    spinner.classList.add('d-none');
+                    alert(`Downloaded ${(endPage - startPage + 1) * 12} songs (pages ${startPage}-${endPage})`);
+                })
+                .catch(err => {
+                    console.error('Export range failed:', err);
+                    alert('Export failed. Please try again.');
+                    btn.disabled = false;
+                    spinner.classList.add('d-none');
+                });
+        }
+
+        function exportSong(id) {
+            const lang = document.getElementById('language').value;
+            const seed = document.getElementById('seed').value || 42;
+            const btn = document.querySelector(`.song-row[data-id=\"${id}\"] button`);
+            if (btn) { btn.disabled = true; btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Exporting...'; }
+            const url = `/export-song?seed=${seed}&id=${id}&language=${encodeURIComponent(lang)}`;
+            fetch(url)
+                .then(r => r.blob())
+                .then(blob => {
+                    const a = document.createElement('a');
+                    a.href = URL.createObjectURL(blob);
+                    a.download = `song_${id}.zip`;
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+                    URL.revokeObjectURL(a.href);
+                    if (btn) { btn.disabled = false; btn.innerHTML = '<i class="bi bi-download"></i> Export Song'; }
+                })
+                .catch(err => {
+                    console.error('Export song failed:', err);
+                    alert('Export failed. Please try again.');
+                    if (btn) { btn.disabled = false; btn.innerHTML = '<i class="bi bi-download"></i> Export Song'; }
+                });
+        }
+
+        function toggleExportRange() {
+            const panel = document.getElementById('export-range-panel');
+            panel.classList.toggle('d-none');
+        }
+
+        function toggleLyricsSearch() {
+            const panel = document.getElementById('lyrics-search-panel');
+            panel.classList.toggle('d-none');
+            if (!panel.classList.contains('d-none')) {
+                document.getElementById('lyrics-search-input').focus();
+            }
+        }
+
+        function searchLyrics() {
+            const searchTerm = document.getElementById('lyrics-search-input').value.toLowerCase().trim();
+            if (!searchTerm) {
+                alert('Please enter search term');
+                return;
+            }
+
+            const resultsPanel = document.getElementById('lyrics-search-results');
+            const resultsList = document.getElementById('search-results-list');
+            const resultsCount = document.getElementById('search-results-count');
+            
+            resultsList.innerHTML = '<p class="text-muted">Searching...</p>';
+            resultsPanel.classList.remove('d-none');
+            
+            // Get all visible songs and search their lyrics
+            const matches = [];
+            const songRows = document.querySelectorAll('.song-row');
+            
+            Promise.all(Array.from(songRows).map(row => {
+                const id = row.getAttribute('data-id');
+                const title = row.querySelector('td:nth-child(3)').textContent;
+                const lyricsUrl = row.nextElementSibling?.querySelector('.lyrics-container')?.getAttribute('data-lyrics-url');
+                
+                if (!lyricsUrl) return Promise.resolve(null);
+                
+                return fetch(lyricsUrl)
+                    .then(r => r.json())
+                    .then(lines => {
+                        const matchingLines = lines.filter(l => l.text.toLowerCase().includes(searchTerm));
+                        if (matchingLines.length > 0) {
+                            return { id, title, lines: matchingLines };
+                        }
+                        return null;
+                    })
+                    .catch(() => null);
+            }))
+            .then(results => {
+                const filtered = results.filter(r => r !== null);
+                resultsCount.textContent = filtered.length;
+                
+                if (filtered.length === 0) {
+                    resultsList.innerHTML = '<p class="text-muted">No matches found.</p>';
+                } else {
+                    let html = '';
+                    filtered.forEach(result => {
+                        html += `
+                            <div class="mb-3 p-2 border rounded bg-white">
+                                <strong>Song ID ${result.id}: ${result.title}</strong>
+                                <div class="mt-2">
+                                    <small class="text-muted">
+                                        ${result.lines.map(l => `<span class="badge bg-warning text-dark me-1">${l.text}</span>`).join(' ')}
+                                    </small>
+                                </div>
+                                <div class="mt-2">
+                                    <button class="btn btn-sm btn-outline-primary" onclick="document.querySelector('.song-row[data-id=\''+result.id+'\']').click()">Open</button>
+                                    <button class="btn btn-sm btn-primary ms-2" onclick="exportSong(${result.id})">Export</button>
+                                </div>
+                            </div>
+                        `;
+                    });
+                    resultsList.innerHTML = html;
+                }
+            })
+            .catch(err => {
+                console.error('Search failed:', err);
+                resultsList.innerHTML = '<p class="text-danger">Search failed.</p>';
+            });
+        }
+
+        // Scroll trigger
+        window.addEventListener('scroll', () => {
+            if (window.innerHeight + window.scrollY >= document.body.offsetHeight - 600) {
+                loadMore();
+            }
+        });
     </script>
 }
